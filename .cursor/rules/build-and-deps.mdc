@@ -1,0 +1,28 @@
+---
+description: CMake presets, vcpkg manifest, and build targets (b01, e11)
+globs: "CMakeLists.txt,**/vcpkg.json,**/CMakePresets.json"
+alwaysApply: false
+---
+
+# Build and Dependencies
+
+## Targets
+
+- `drone_mapper_simulation`
+- `drone_mapper_simulation_test`
+- `maps_comparison`
+
+## Build
+
+```bash
+cmake --preset default
+cmake --build --preset default
+```
+
+## Dependencies
+
+Declare in `vcpkg.json` (mp-units, yaml-cpp, cnpy or equivalent, gtest). No manual install in README (e11).
+
+## README
+
+Build/run instructions must match actual CMake presets and binary names.

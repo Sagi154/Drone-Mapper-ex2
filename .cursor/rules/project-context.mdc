@@ -1,0 +1,33 @@
+---
+description: Drone-Mapper-ex2 project context and non-negotiable constraints
+alwaysApply: true
+---
+
+# Drone-Mapper-ex2 Context
+
+TAU AdvCpp Assignment 2. Implement on the **course skeleton** (`ex_2_skeleton` APIs).
+
+## Authority order
+
+1. Assignment 2 docx (`context/`)
+2. Skeleton interfaces marked "Do not change"
+3. Review Guideline + `docs/review-error-codes.md`
+4. Ex1 (`../Drone-Mapper/`) — **algorithm ideas only**, not structure or style
+
+## Hard constraints
+
+- Use exact component names: `SimulationManager`, `DroneControlImpl`, etc.
+- Do **not** alter frozen interfaces (`IMap3D`, `IMappingAlgorithm`, …).
+- Do **not** reimplement `MockLidar` or `ScanResultToVoxels`.
+- Never `exit()` / `abort()`; finish `main` gracefully.
+- Log errors **immediately** to per-run error log — never defer.
+- Keep `docs/HLD.md` aligned with code (e14/e15).
+- Document output layout in `readme.txt`.
+
+## Architecture
+
+`SimulationManager` → cartesian product → `SimulationRunFactoryImpl` → `SimulationRunImpl` → `MissionControlImpl` / `DroneControlImpl`.
+
+## Before structural changes
+
+Read `docs/HLD.md` and `docs/assignment2-checklist.md`.

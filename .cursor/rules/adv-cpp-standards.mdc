@@ -1,0 +1,36 @@
+---
+description: AdvCpp review standards and C++ hygiene (Review Guideline + error codes)
+globs: "**/*.{h,hpp,cpp}"
+alwaysApply: false
+---
+
+# AdvCpp Standards
+
+## Memory and lifetime
+
+- No `malloc`/`free`; avoid raw `new`/`delete` — use RAII and smart pointers.
+- Classes owning dynamic memory follow rule of 3/5.
+
+## API design
+
+- `const` methods where state is not mutated (e07).
+- Pass inputs as `const&`; avoid unnecessary copies (e06).
+- Lean public APIs — no methods not required by interface/assignment (e08).
+- Error handlers take structured `ErrorRef`/codes — not ad-hoc diagnostic strings (e05).
+
+## Structure
+
+- Short functions, single responsibility (e09).
+- Unrelated classes not grouped in one header (e01).
+- Minimal `#includes`; forward-declare when possible (e17).
+- Free helpers in anonymous namespace in `.cpp`, not public class API.
+- No duplicate logic across components (e10).
+
+## Values
+
+- No magic numbers — named constants (e23).
+- No repeated expensive computation — cache or compute once (e21).
+
+## Includes DAG
+
+Headers should not create cycles. Implementation details stay in `.cpp`.

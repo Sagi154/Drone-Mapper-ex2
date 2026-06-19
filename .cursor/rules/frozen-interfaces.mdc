@@ -1,0 +1,35 @@
+---
+description: Course skeleton interfaces — do not modify signatures or semantics
+globs: "include/drone_mapper/**"
+alwaysApply: false
+---
+
+# Frozen Interfaces
+
+Headers marked **"Do not change this interface"** are immutable (e18).
+
+## IMappingAlgorithm
+
+- `nextStep(state, latest_scan)` — `latest_scan` may be `nullptr` on first step.
+- No `applyVoxelUpdates` (removed 12.6).
+- Constructor takes mission, lidar, drone configs + `const IMap3D& output_map`.
+
+## IMap3D / IMutableMap3D
+
+- `atVoxel(pos)`, `getMapConfig()`, `isInBounds(pos)`.
+- `MapConfig` bundles boundaries + offset + resolution.
+- `MissionConfigData` does **not** own boundaries (9.6).
+
+## DroneControlImpl::step()
+
+1. Read state from GPS
+2. `algorithm.nextStep(state, latest_scan)`
+3. If movement: validate, execute via `IDroneMovement`
+4. If scan: `lidar.scan()` → `ScanResultToVoxels` → `output_map.set()`
+5. Return `DroneStepResult`
+
+Algorithm reads output map via `IMap3D&`; it does **not** write voxels directly.
+
+## Provided — integrate only
+
+`MockLidar`, `ScanResultToVoxels` — do not redesign.

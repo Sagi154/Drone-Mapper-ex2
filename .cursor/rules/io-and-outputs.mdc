@@ -1,0 +1,35 @@
+---
+description: YAML/.npy I/O, CLI paths, and output artifacts
+globs: "**/*{Yaml,yaml,YML,yml}*,**/*Parser*,**/*Npy*,**/drone_mapper_simulation_main.cpp,**/SimulationManager*"
+alwaysApply: false
+---
+
+# I/O and Outputs
+
+## Inputs
+
+- Configs: YAML (`drone_config`, `mission_config`, `lidar_config`, `simulation_config`, compositions)
+- Maps: `.npy` binary voxel arrays
+- Composition expands: simulations × missions × drones × lidars
+
+## Outputs (in `output_path` or CWD)
+
+- `simulation_output.yaml` — hierarchical `score_report` (see assignment example)
+- `output_results/` — output maps + error logs (document naming in `readme.txt`)
+
+## CLI path rules
+
+| Argument | Behavior |
+|----------|----------|
+| Missing yaml | `simulation.yaml` in CWD |
+| Filename only | Look in CWD |
+| Relative path | Under CWD |
+| Absolute path | Use as given |
+
+## Resolution request
+
+Report `resolution_request_status`: `ACCEPTED`, `IGNORED`, or `IGNORED TOO SMALL`.
+
+## Dependencies
+
+Libraries via `vcpkg.json` only — no manual install steps (e11).

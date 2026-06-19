@@ -1,0 +1,45 @@
+---
+description: GTest structure, filters, and bug-isolation expectations
+globs: "tests/**"
+alwaysApply: false
+---
+
+# Testing Requirements
+
+## Layout
+
+- Component: `tests/components/` — one suite per required component
+- Integration: `tests/integration/` — min 2 (real algorithm + mock algorithm)
+
+## Required GTest filters
+
+Suite names must match these prefixes:
+
+`SimulationManager.*`, `SimulationRun.*`, `MissionControl.*`, `DroneControl.*`, `MappingAlgorithm.*`, `MockLidar.*`, `MapsComparison.*`, `Integration.*`
+
+Example: `TEST(DroneControlTest, ExecutesScanAfterMove)` → filter `DroneControl.*`
+
+## SimulationRun tests
+
+Must also cover `MockGPS` and `MockMovement`.
+
+## Bug injection grading
+
+- Unrelated component tests must **not** fail when another component is buggy.
+- Target component tests should catch ≥60% of injected bugs.
+- Integration tests should catch ≥20%.
+
+## Coverage
+
+Happy path + error cases per component. Use GMock for direct dependencies only.
+
+## Run
+
+```bash
+./build/drone_mapper_simulation_test
+./build/drone_mapper_simulation_test --gtest_filter=DroneControl.*
+```
+
+## Missing input (b06)
+
+Include tests for missing files and invalid paths.

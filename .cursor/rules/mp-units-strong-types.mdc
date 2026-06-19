@@ -1,0 +1,43 @@
+---
+description: mp-units strong types — no raw double for cm/deg in APIs (e03, e16)
+globs: "**/*.{h,hpp,cpp}"
+alwaysApply: false
+---
+
+# Strong Types (mp-units)
+
+All distances and angles use types from `include/drone_mapper/Units.h`.
+
+## Required types
+
+- `PhysicalLength`, `XLength`, `YLength`, `ZLength`, `Position3D`
+- `HorizontalAngle`, `AltitudeAngle`, `Orientation`
+
+## Rules
+
+```cpp
+// BAD — e16
+void move(double distance_cm);
+struct TickSnapshot { double x, y; };
+
+// GOOD
+types::MovementResult advance(PhysicalLength distance);
+```
+
+```cpp
+// BAD — e03
+double d = length.numerical_value_in(cm);
+double x = pos.x.numerical_value_in(cm) + 1.0;
+
+// GOOD — quantity arithmetic
+auto next = pos.x + 10.0 * cm;
+auto dist = si::sqrt(x * x + y * y);
+```
+
+## Boundaries
+
+YAML/`.npy` parsing may read numbers as doubles — convert to strong types **immediately** at the parse boundary.
+
+## Aliases
+
+Import unit symbols via `Units.h` once per file. **No** per-function `namespace su = mp_units::si::unit_symbols` (e17s).

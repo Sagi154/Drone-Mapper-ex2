@@ -1,0 +1,45 @@
+---
+description: Error handling, logging, and score -1 behavior (ex1 + ex2, b04/b06)
+alwaysApply: true
+---
+
+# Error Handling and Logging
+
+## Never
+
+- Crash or call `exit()` / `abort()`.
+- Defer error logging to end of run.
+
+## Recoverable input errors
+
+- Apply reasonable defaults where assignment allows.
+- Log immediately to error log with structured info.
+
+## Unrecoverable errors
+
+- Print descriptive message; return from `main` gracefully.
+- No `input_errors.txt` requirement in ex2 — use per-run error logs under `output_results/`.
+
+## Per-scenario failures
+
+- Continuable error → `score: -1`, log, continue next scenario.
+- Group failure (e.g. bad map file) → `-1` for all runs in that group.
+
+## maps_comparison executable
+
+- Success: stdout = score only (`87.4`), no extra text.
+- Error: stdout `-1`, message on stderr.
+
+## Error API (e05)
+
+```cpp
+// BAD
+logError("file not found: " + path);
+
+// GOOD
+logError({.code = "MAP_FILE_NOT_FOUND", .message = path.string()});
+```
+
+## Test missing inputs (b06)
+
+Always handle: missing `simulation.yaml`, missing map path, invalid composition refs.

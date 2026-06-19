@@ -1,0 +1,29 @@
+---
+description: Ex1 deductions to avoid — do not copy ex1 patterns blindly
+globs: "**/*.{h,hpp,cpp}"
+alwaysApply: false
+---
+
+# Ex1 Anti-Patterns
+
+See `docs/ex1-mistakes.md`. Ex1 grade 76 — algorithm OK, C++ hygiene and runtime need work.
+
+## Never repeat
+
+| Pattern | Code |
+|---------|------|
+| `namespace su = mp_units::...` inside functions | e17s |
+| `ScanProbing`, `ScanOptions`, `TickSnapshot` with raw doubles | e16n |
+| `ErrorLogger::lines()` exposing internal vector | e22m |
+| `SimulationState::setTruthCell` — unneeded public API | e08m |
+| Non-const `scan()` when read-only | e07m |
+| Slow runs on small maps | b05s |
+| Missing file → no error handling | b06m |
+
+## Do not port
+
+`ScanProbing`, `TickSnapshot`, `SimulationState`, ex1 `ErrorLogger`, ex1 `main` loop, txt parsers.
+
+## Safe to reuse ideas
+
+Frontier/BFS → `MappingAlgorithmImpl::nextStep`; collision checks → `MockMovement`; scoring math → `MapsComparison`.
