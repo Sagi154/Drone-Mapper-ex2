@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 find_package(mp-units CONFIG REQUIRED)
 find_package(tinynpy CONFIG REQUIRED)
 find_package(yaml-cpp REQUIRED) # new!
+find_package(GTest CONFIG REQUIRED)
 
 add_library(drone_mapper
     src/DroneControlImpl.cpp
@@ -49,3 +50,13 @@ target_link_libraries(maps_comparison PRIVATE drone_mapper)
 # Compile the yaml example file
 add_executable(example_yml cpp_yaml_example/main.cpp)
 target_link_libraries(example_yml PRIVATE yaml-cpp::yaml-cpp)
+
+enable_testing()
+
+add_executable(drone_mapper_simulation_test tests/components/test_map3d_impl.cpp)
+target_link_libraries(drone_mapper_simulation_test PRIVATE drone_mapper GTest::gtest_main)
+target_compile_definitions(drone_mapper_simulation_test
+    PRIVATE
+        DRONE_MAPPER_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+)
+add_test(NAME drone_mapper_simulation_test COMMAND drone_mapper_simulation_test)
