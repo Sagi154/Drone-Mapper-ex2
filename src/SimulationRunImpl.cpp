@@ -43,6 +43,18 @@ SimulationRunImpl::SimulationRunImpl(std::unique_ptr<const IMap3D> hidden_map,
 }
 
 types::SimulationResult SimulationRunImpl::run() {
+    // Stub: touch injected deps so -Wunused-private-field stays clean under -Werror on Linux CI.
+    (void)hidden_map_;
+    (void)output_map_;
+    (void)gps_;
+    (void)movement_;
+    (void)lidar_;
+    (void)mapping_algorithm_;
+    (void)drone_control_;
+    (void)mission_control_;
+    (void)simulation_config_;
+    (void)mission_config_;
+    (void)output_map_file_;
     return types::SimulationResult{};
 }
 
