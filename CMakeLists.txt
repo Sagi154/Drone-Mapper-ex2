@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 option(DRONE_MAPPER_BUILD_YAML_EXAMPLE "Build the course yaml-cpp example executable" ON)
 
 find_package(mp-units CONFIG REQUIRED)
-find_package(tinynpy CONFIG REQUIRED)
+find_package(TinyNPY CONFIG REQUIRED)
 find_package(yaml-cpp REQUIRED) # new!
 find_package(GTest CONFIG REQUIRED)
 
