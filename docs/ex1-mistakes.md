@@ -19,12 +19,20 @@ Ex1 final grade: 76.0 (bonus 2.0). Ex1 is **logic reference only**; these patter
 | b05s | Scenario timeout (~1 min) | Profile small maps (~10s target); avoid redundant rescans; cap work in `nextStep` |
 | b06m | Missing input not handled | Test missing `simulation.yaml`, map files; graceful error + immediate log + score -1 |
 
+## Ex1 vs ex2 error-handling traps
+
+| Ex1 habit | Why it fails ex2 | Ex2 fix |
+|-----------|------------------|---------|
+| `ErrorLogger::flushIfNeeded` at end of run | Ex2 requires immediate per-run logging | Write/append to error log on every error |
+| `return 1` from main on bad start pose | Composition has many runs; one failure must not kill all | `score: -1`, log, continue next scenario |
+| Rubric codes vs runtime codes confused | Different systems — see `docs/review-error-codes.md` | `e05` = API style; `DRONE_HITS_OBSTACLE` = `ErrorRef::code` |
+
 ## Do not port from ex1
 
 - `ScanProbing`, `ScanOptions`, `TickSnapshot`
 - `SimulationState` as monolithic state bag
-- `ErrorLogger` with exposed `lines()`
-- Ex1 `main.cpp` orchestration loop
+- `ErrorLogger` with exposed `lines()` or deferred flush
+- Ex1 `main.cpp` orchestration loop (whole-program abort on run errors)
 - Text config parsers (rewrite for YAML)
 - Per-function `namespace su = ...` aliases
 
