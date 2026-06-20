@@ -1,6 +1,8 @@
 add_executable(drone_mapper_simulation_test
     components/test_map3d_impl.cpp
     components/test_yaml_config_parsers.cpp
+    components/test_run_error_log.cpp
+    components/test_simulation_run_factory.cpp
     components/test_simulation_run.cpp
     components/test_drone_control.cpp
     components/test_mapping_algorithm.cpp

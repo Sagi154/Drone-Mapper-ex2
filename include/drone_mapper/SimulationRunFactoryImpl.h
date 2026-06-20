@@ -12,6 +12,9 @@ public:
            const types::DroneConfigData& drone,
            const types::LidarConfigData& lidar,
            const std::filesystem::path& output_path) override;
+
+private:
+    int next_run_id_ = 1;
 };
 
 } // namespace drone_mapper

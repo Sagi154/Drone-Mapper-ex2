@@ -8,7 +8,10 @@
 #include <drone_mapper/MockLidar.h>
 #include <drone_mapper/MockMovement.h>
 #include <drone_mapper/SimulationRunImpl.h>
+#include <drone_mapper/io/RunErrorLog.h>
+#include <drone_mapper/io/RunPathHelpers.h>
 
+#include <filesystem>
 #include <memory>
 
 namespace drone_mapper {
@@ -19,15 +22,25 @@ SimulationRunFactoryImpl::create(const types::SimulationConfigData& simulation,
                                  const types::DroneConfigData& drone,
                                  const types::LidarConfigData& lidar,
                                  const std::filesystem::path& output_path) {
+    // Phase 2/3: load hidden map from simulation.map_filename; manager-owned run_id.
+    const int run_id = next_run_id_++;
+    const std::filesystem::path run_dir = io::runOutputDir(output_path, run_id);
+    const std::filesystem::path output_map_file = io::runOutputMap(output_path, run_id);
+    const std::filesystem::path error_log_file = io::runErrorLog(output_path, run_id);
+
+    std::filesystem::create_directories(run_dir);
+    io::RunErrorLog{error_log_file};
+
     auto hidden_map = std::make_unique<Map3DImpl>(std::make_shared<NpyArray>());
     auto output_map = std::make_unique<Map3DImpl>(std::make_shared<NpyArray>());
 
     auto gps = std::make_unique<MockGPS>(
         simulation.initial_drone_position,
-        Orientation{simulation.initial_angle, 0.0 * altitude_angle[deg]},mission.gps_resolution);
+        Orientation{simulation.initial_angle, 0.0 * altitude_angle[deg]},
+        mission.gps_resolution);
     auto movement = std::make_unique<MockMovement>(*gps, *hidden_map, drone);
     auto lidar_impl = std::make_unique<MockLidar>(lidar, *hidden_map, *gps);
-    auto mapping_algorithm = std::make_unique<MappingAlgorithmImpl>(mission,lidar,drone, *output_map);
+    auto mapping_algorithm = std::make_unique<MappingAlgorithmImpl>(mission, lidar, drone, *output_map);
 
     auto drone_control = std::make_unique<DroneControlImpl>(
         drone,
@@ -38,7 +51,6 @@ SimulationRunFactoryImpl::create(const types::SimulationConfigData& simulation,
         *output_map,
         *mapping_algorithm);
 
-    const std::filesystem::path output_map_file = output_path / "output_map_stub.npy";
     auto mission_control = std::make_unique<MissionControlImpl>(
         mission,
         drone,
