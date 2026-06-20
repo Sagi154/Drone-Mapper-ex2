@@ -1,0 +1,3 @@
+drone_config:
+  dimensions_cm: not_a_number
+  max_rotate_deg: 45

@@ -21,6 +21,15 @@ add_library(drone_mapper
     src/SimulationManager.cpp
     src/SimulationRunFactoryImpl.cpp
     src/SimulationRunImpl.cpp
+    src/io/RunErrorLog.cpp
+    src/io/PathResolver.cpp
+    src/io/RunPathHelpers.cpp
+    src/io/YamlParseUtil.cpp
+    src/io/DroneConfigYamlParser.cpp
+    src/io/MissionConfigYamlParser.cpp
+    src/io/LidarConfigYamlParser.cpp
+    src/io/SimulationConfigYamlParser.cpp
+    src/io/CompositionYamlParser.cpp
 )
 
 target_compile_features(drone_mapper PUBLIC cxx_std_20)
@@ -38,7 +47,7 @@ target_link_libraries(drone_mapper
     PUBLIC
         mp-units::mp-units
         TinyNPY::TinyNPY
-        #yaml-cpp::yaml-cpp you #you should add this when you actually use yaml parsing
+        yaml-cpp::yaml-cpp
 )
 
 add_executable(drone_mapper_simulation src/drone_mapper_simulation_main.cpp)
@@ -53,7 +62,10 @@ target_link_libraries(example_yml PRIVATE yaml-cpp::yaml-cpp)
 
 enable_testing()
 
-add_executable(drone_mapper_simulation_test tests/components/test_map3d_impl.cpp)
+add_executable(drone_mapper_simulation_test
+    tests/components/test_map3d_impl.cpp
+    tests/components/test_yaml_config_parsers.cpp
+)
 target_link_libraries(drone_mapper_simulation_test PRIVATE drone_mapper GTest::gtest_main)
 target_compile_definitions(drone_mapper_simulation_test
     PRIVATE
