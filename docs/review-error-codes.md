@@ -2,6 +2,18 @@
 
 From `context/Error Code Key.xlsx`. Severity: minor (m), normal (n), severe (s).
 
+## Not the same as runtime `error_ref.code`
+
+These rubric codes (`e01`–`e23`, `b01`–`b08`) grade **submission quality** during manual review and scenario runs. They do **not** appear in `simulation_output.yaml`.
+
+Runtime semantic codes (e.g. `DRONE_HITS_OBSTACLE`, `MISSION_BOUNDARY_INVALID`) live in `types::ErrorRef::code` and are separate. Assignment 2 says to follow ex1 error-handling **instructions** plus ex2 additions (immediate logging, `-1` scores, continue on continuable failures) — the Error Code Key defines **how well** you implement that, not which runtime strings to use.
+
+| Concern | Rubric | Runtime |
+|---------|--------|---------|
+| Handler takes a string instead of structured info | e05 | — |
+| Scenario fails without proper handling | b04 | `score: -1` + `error_ref` |
+| Missing input file | b06 | e.g. `MAP_FILE_NOT_FOUND` |
+
 ## Code review (e*)
 
 | Code | Description | m | n | s |

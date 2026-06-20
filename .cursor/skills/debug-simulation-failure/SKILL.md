@@ -7,9 +7,10 @@ description: Diagnoses Drone-Mapper-ex2 scenario failures, timeouts (b05), score
 
 ## Gather evidence
 
-1. Find the run in `output_results/` — error log, output map, steps count.
-2. Check `simulation_output.yaml` for `status`, `score`, `error_ref.code`.
-3. Reproduce with minimal composition YAML (single simulation × single mission × single drone × single lidar).
+1. Find the run folder: `output_results/run_NNNN/` (`output_map.npy`, `error.log`).
+2. Match `run_id` in `simulation_output.yaml` to folder (`run_0001` ↔ `run_id: 1`).
+3. Check `mission_score`, `mission_results[].status`, `mission_results[].errors`.
+4. Reproduce with minimal composition YAML (single simulation × single mission × single drone × single lidar).
 
 ## Trace call stack
 
@@ -43,7 +44,9 @@ SimulationManager
 
 ## Verify logging
 
-Errors must appear in error log **at occurrence time**, not at end of run.
+Errors must appear in error log **at occurrence time**, not at end of run. If the log is empty until the composition finishes, the ex1 deferred-flush pattern was likely ported by mistake.
+
+Check that a failed run still allows later runs in `simulation_output.yaml` (ex1-style `return 1` from main would prevent this).
 
 ## Run single component
 

@@ -53,10 +53,11 @@ Condensed from `context/Advanced Topics TAU 2026B - Assignment 2.docx`. On confl
 ## Error handling (ex1 + ex2)
 
 - Never crash; never call `exit()`
-- Recoverable input errors → defaults + log
-- Unrecoverable → message, graceful finish
-- Failed scenario (continuable) → score `-1`, continue next run
+- Recoverable input errors → defaults + **immediate** log (no deferred flush like ex1 `input_errors.txt`)
+- Unrecoverable **for one run** → structured `ErrorRef`, `score: -1`, continue composition
+- Unrecoverable **for whole program** (e.g. composition YAML unreadable) → log, return from `main` gracefully
 - Group failure (e.g. bad map) → `-1` for all runs in group
+- Rubric codes (`e05`, `b04`) ≠ runtime `error_ref.code` strings — see `docs/review-error-codes.md`
 
 ## API constraints
 
