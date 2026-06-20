@@ -31,4 +31,5 @@ ENV CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL}
 RUN cmake -G Ninja -S . -B build/ci \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
+        -DDRONE_MAPPER_BUILD_YAML_EXAMPLE=OFF \
     && cmake --build build/ci
