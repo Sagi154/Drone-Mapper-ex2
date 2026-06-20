@@ -30,6 +30,7 @@ TAU Advanced Topics in Programming, Assignment 2. Course skeleton is merged at r
 | `docs/ex1-to-ex2-porting.md` | Component mapping ex1 → ex2 |
 | `refactor_by_component.md` | Full porting table |
 | `workplan.md` | Team execution plan |
+| `readme.txt` | Build/run + **agreed output layout** (`run_NNNN`, YAML schema) |
 | `context/` | Original assignment and review docx files |
 
 ## Build and run
@@ -49,7 +50,9 @@ cmake --build --preset default
 - **Never** use `exit()` / `abort()`; return from `main` gracefully.
 - **Never** unwrap mp-units to `double` for math; use quantity arithmetic.
 - Ex1 (`../Drone-Mapper/`) is **logic reference only** — on conflict, Assignment 2 + Review Guideline win.
-- Log all errors **immediately** to the per-run error log; never defer.
+- Log all errors **immediately** to the per-run error log; never defer (do not port ex1 `flushIfNeeded`).
+- **Rubric codes** (`e05`, `b04`, …) ≠ **runtime codes** (`ErrorRef::code` in YAML) — see `docs/review-error-codes.md`.
+- One failed scenario → `score: -1` and continue; do not abort the whole composition unless startup is impossible.
 - Keep `docs/HLD.md` aligned with code (graded).
 
 ## Test filters (required names)

@@ -11,6 +11,7 @@ description: Implements or wires a single Assignment 2 skeleton component with t
 2. Read the matching flow in `docs/HLD.md` (when copied from skeleton).
 3. Check `docs/ex1-to-ex2-porting.md` for ex1 reuse hints — **ideas only**, not copy-paste.
 4. Read `docs/ex1-mistakes.md` — avoid listed anti-patterns.
+5. For output paths / YAML shape: read **`readme.txt`** (OUTPUT LAYOUT section).
 
 ## Implementation steps
 
@@ -33,8 +34,8 @@ description: Implements or wires a single Assignment 2 skeleton component with t
 | `DroneControlImpl` | movement → scan → ScanResultToVoxels → set |
 | `MappingAlgorithmImpl` | `nextStep(state, nullptr)` on first call |
 | `MissionControlImpl` | loop `drone_control.step()` until done/max_steps/error |
-| `SimulationRunFactoryImpl` | wire full object graph; transfer ownership to `SimulationRunImpl` |
-| `SimulationManager` | cartesian product; aggregate `SimulationManagerReport` |
+| `SimulationRunFactoryImpl` | wire full object graph; set paths via `runOutputMap` / `runErrorLog` from `src/io/`; pass `run_id` from manager |
+| `SimulationManager` | cartesian product; compute `run_id`; aggregate `SimulationManagerReport`; write `simulation_output.yaml` |
 | `Map3DImpl` | `.npy` load/save; `MapConfig` boundaries/offset/resolution |
 
 ## Authority
