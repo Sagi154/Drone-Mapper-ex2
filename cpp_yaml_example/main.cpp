@@ -9,7 +9,7 @@ namespace fs = std::filesystem;
 
 void read_cpp_yaml(const fs::path& input_path)
 {
-    YAML::Node config = YAML::LoadFile(input_path);
+    YAML::Node config = YAML::LoadFile(input_path.string());
     YAML::Node national_inner = config["national"];
 
     std::cout << "national tag as " << national_inner.size() << " elements." << std::endl;

@@ -23,13 +23,11 @@ add_library(drone_mapper
 )
 
 target_compile_features(drone_mapper PUBLIC cxx_std_20)
-target_compile_options(drone_mapper
-    PRIVATE
-        -Wall
-        -Wextra
-        -Werror
-        -pedantic
-)
+if(MSVC)
+    target_compile_options(drone_mapper PRIVATE /W4 /WX /utf-8)
+else()
+    target_compile_options(drone_mapper PRIVATE -Wall -Wextra -Werror -pedantic)
+endif()
 target_include_directories(drone_mapper
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
