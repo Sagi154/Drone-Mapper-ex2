@@ -22,10 +22,7 @@ function(add_drone_mapper_test_suite target_name label)
         PRIVATE
             ${CMAKE_SOURCE_DIR}/include
     )
-    gtest_discover_tests(${target_name}
-        DISCOVERY_MODE PRE_TEST
-        PROPERTIES LABELS "${label}"
-    )
+    gtest_discover_tests(${target_name} PROPERTIES LABELS "${label}")
 endfunction()
 
 # Implemented component suites only — add stub files here once they contain real tests.
