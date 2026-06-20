@@ -19,10 +19,11 @@ See `docs/ex1-mistakes.md`. Ex1 grade 76 — algorithm OK, C++ hygiene and runti
 | Non-const `scan()` when read-only | e07m |
 | Slow runs on small maps | b05s |
 | Missing file → no error handling | b06m |
+| Deferred error flush at end of run (`flushIfNeeded`) | ex2 violation — log immediately per run |
 
 ## Do not port
 
-`ScanProbing`, `TickSnapshot`, `SimulationState`, ex1 `ErrorLogger`, ex1 `main` loop, txt parsers.
+`ScanProbing`, `TickSnapshot`, `SimulationState`, ex1 `ErrorLogger` (deferred flush or `lines()`), ex1 `main` loop (whole-program abort), txt parsers.
 
 ## Safe to reuse ideas
 

@@ -25,7 +25,17 @@ description: Ports algorithm logic from ex1 Drone-Mapper into ex2 skeleton compo
 
 ## Do not port
 
-`ScanProbing`, `ScanOptions`, `TickSnapshot`, `SimulationState`, `ErrorLogger::lines()`, ex1 `main`, per-function `namespace su = ...`.
+`ScanProbing`, `ScanOptions`, `TickSnapshot`, `SimulationState`, ex1 `ErrorLogger` (especially `flushIfNeeded` at end of run), ex1 `main`, per-function `namespace su = ...`.
+
+## Error handling when porting
+
+| Ex1 pattern | Ex2 replacement |
+|-------------|-----------------|
+| `logger.add(...)` then `flushIfNeeded` at shutdown | Append to per-run log **on every** error |
+| `return 1` from main on bad start pose / map | `ErrorRef` + `score: -1` for that run; continue composition |
+| Free-form `"unrecoverable error: ..."` on stderr only | Structured `ErrorRef` in log **and** YAML report |
+
+Ex1 recoverable/unrecoverable **semantics** carry forward; ex2 adds immediate logging and multi-run continuation.
 
 ## Safe to port conceptually
 

@@ -5,20 +5,47 @@ alwaysApply: true
 
 # Error Handling and Logging
 
+## Two different "error code" systems (do not mix)
+
+| System | Source | Use |
+|--------|--------|-----|
+| **Review rubric** (`e05`, `b04`, …) | `docs/review-error-codes.md` | Grading — how you write C++ and handle failures |
+| **Runtime codes** (`DRONE_HITS_OBSTACLE`, …) | `types::ErrorRef::code` | Per-run semantics in logs and `simulation_output.yaml` |
+
+Never put rubric codes (`e05`) in `error_ref.code`. Never pass free-form strings where structured `ErrorRef` is expected (e05).
+
 ## Never
 
 - Crash or call `exit()` / `abort()`.
-- Defer error logging to end of run.
+- Defer error logging to end of run (ex1 `ErrorLogger::flushIfNeeded` at shutdown is **not** valid in ex2).
+- Abort the entire composition because one scenario failed — unless startup itself is impossible (e.g. composition YAML unreadable).
 
 ## Recoverable input errors
 
-- Apply reasonable defaults where assignment allows.
-- Log immediately to error log with structured info.
+- Apply reasonable defaults where assignment allows (same spirit as ex1).
+- Log immediately to the per-run error log with structured `ErrorRef`-style info.
 
-## Unrecoverable errors
+## Unrecoverable errors — scope matters
 
-- Print descriptive message; return from `main` gracefully.
-- No `input_errors.txt` requirement in ex2 — use per-run error logs under `output_results/`.
+| Scope | Behavior |
+|-------|----------|
+| Single run (bad start pose, collision mid-mission) | Log immediately → `score: -1` → continue next scenario |
+| Group (bad `.npy` for one simulation config) | Log → `-1` for all runs in that group → continue other groups |
+| Whole program (composition file missing/unparseable) | Log → return from `main` gracefully (no `exit()`) |
+
+No `input_errors.txt` in ex2 — use per-run `output_results/run_NNNN/error.log`.
+
+## error.log format (agreed — see `readme.txt`)
+
+One line per error, flushed immediately:
+
+```
+<ISO-8601 UTC> <ERROR_CODE> <user-facing message>
+```
+
+## YAML error reporting
+
+Emit **`mission_results[].errors`** as a list of `{code, message}` (`ErrorRef`). Do not use rubric codes in `code`. Mirror the same codes/messages in `error.log`.
 
 ## Per-scenario failures
 
@@ -30,15 +57,19 @@ alwaysApply: true
 - Success: stdout = score only (`87.4`), no extra text.
 - Error: stdout `-1`, message on stderr.
 
-## Error API (e05)
+## Error API (e05) and reporting
+
+Internal APIs: pass `types::ErrorRef` or enums — not ad-hoc diagnostic strings.
 
 ```cpp
-// BAD
+// BAD — e05: handler receives only a message
 logError("file not found: " + path);
 
-// GOOD
+// GOOD — structured code + message; message is fine at log/YAML boundary
 logError({.code = "MAP_FILE_NOT_FOUND", .message = path.string()});
 ```
+
+`MissionRunResult::errors` is a `vector<ErrorRef>`. Emit the full list in `simulation_output.yaml` under `mission_results[].errors` and mirror each entry in `error.log` (see `readme.txt`).
 
 ## Test missing inputs (b06)
 

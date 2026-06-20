@@ -22,7 +22,7 @@ TAU AdvCpp Assignment 2. Implement on the **course skeleton** (`ex_2_skeleton` A
 - Never `exit()` / `abort()`; finish `main` gracefully.
 - Log errors **immediately** to per-run error log — never defer.
 - Keep `docs/HLD.md` aligned with code (e14/e15).
-- Document output layout in `readme.txt`.
+- Document output layout in `readme.txt` (agreed spec: `output_results/run_NNNN/`).
 
 ## Architecture
 

@@ -29,9 +29,12 @@ Copy this checklist and verify each item.
 
 ## Outputs
 
-- [ ] `simulation_output.yaml` structure matches `readme.txt` description
-- [ ] `output_results/` contains maps and error logs
-- [ ] Failed scenarios show `score: -1` and continue when appropriate
+- [ ] `simulation_output.yaml` structure matches `readme.txt` (`score_report`, `runs[]`, `config_indices`)
+- [ ] `output_results/run_NNNN/output_map.npy` and `error.log` per run (paths match YAML)
+- [ ] `run_id` ↔ folder naming consistent (`run_0001` = `run_id: 1`)
+- [ ] Failed scenarios: `mission_score: -1`, error in `error.log`, later runs still execute
+- [ ] Error logs written **at occurrence time** (timestamped lines, not batch at end)
+- [ ] Runtime `ErrorRef::code` values — not rubric codes (`e05`, `b04`, …)
 
 ## Code review codes (spot-check)
 
