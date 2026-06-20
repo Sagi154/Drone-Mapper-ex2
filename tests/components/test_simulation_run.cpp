@@ -157,6 +157,80 @@ TEST(SimulationRunTest, GPS_SetHeading_UpdatesHeading) {
     EXPECT_DOUBLE_EQ(gps.heading().altitude.numerical_value_in(deg), -5.0);
 }
 
+/// Scenario: setPosition with negative coordinates that need snapping.
+/// With resolution=10cm, -14cm snaps to -10cm (round half away from zero).
+/// Expected: all three axes snap independently and correctly for negative values.
+TEST(SimulationRunTest, GPS_SetPosition_NegativeCoordinates_SnapCorrectly) {
+    MockGPS gps{Position3D{}, Orientation{}, 10.0 * isq::length[cm]};
+
+    gps.setPosition(Position3D{
+        -14.0 * x_extent[cm],  // nearest grid: -10
+        -16.0 * y_extent[cm],  // nearest grid: -20
+        -25.0 * z_extent[cm],  // nearest grid: -30
+    });
+    const Position3D got = gps.position();
+    EXPECT_DOUBLE_EQ(got.x.numerical_value_in(cm), -10.0);
+    EXPECT_DOUBLE_EQ(got.y.numerical_value_in(cm), -20.0);
+    EXPECT_DOUBLE_EQ(got.z.numerical_value_in(cm), -30.0);
+}
+
+/// Scenario: setPosition exactly at the halfway point (res=10cm, value=15cm).
+/// std::round rounds half away from zero, so 15cm → 20cm, -15cm → -20cm.
+/// Expected: 15cm snaps up to 20cm; -15cm snaps down to -20cm.
+TEST(SimulationRunTest, GPS_SetPosition_HalfwayPoint_RoundsAwayFromZero) {
+    MockGPS gps{Position3D{}, Orientation{}, 10.0 * isq::length[cm]};
+
+    gps.setPosition(Position3D{
+        15.0  * x_extent[cm],   // half-way → 20
+        -15.0 * y_extent[cm],   // half-way → -20
+        5.0   * z_extent[cm],   // already on grid → 10? No: 5/10=0.5 → round=1 → 10
+    });
+    EXPECT_DOUBLE_EQ(gps.position().x.numerical_value_in(cm),  20.0);
+    EXPECT_DOUBLE_EQ(gps.position().y.numerical_value_in(cm), -20.0);
+    EXPECT_DOUBLE_EQ(gps.position().z.numerical_value_in(cm),  10.0);
+}
+
+/// Scenario: fine sub-centimetre resolution (0.5 cm).
+/// Expected: values snap to the nearest 0.5-cm grid point.
+TEST(SimulationRunTest, GPS_SetPosition_FineResolution_SnapsCorrectly) {
+    MockGPS gps{Position3D{}, Orientation{}, 0.5 * isq::length[cm]};
+
+    gps.setPosition(Position3D{
+        7.3 * x_extent[cm],   // 7.3 / 0.5 = 14.6 → round = 15 → 7.5
+        0.2 * y_extent[cm],   // 0.2 / 0.5 = 0.4  → round = 0  → 0.0
+        1.8 * z_extent[cm],   // 1.8 / 0.5 = 3.6  → round = 4  → 2.0
+    });
+    EXPECT_DOUBLE_EQ(gps.position().x.numerical_value_in(cm), 7.5);
+    EXPECT_DOUBLE_EQ(gps.position().y.numerical_value_in(cm), 0.0);
+    EXPECT_DOUBLE_EQ(gps.position().z.numerical_value_in(cm), 2.0);
+}
+
+/// Scenario: successive setPosition calls — each snaps to its own nearest grid point.
+/// Expected: each call is independent; no cumulative drift from prior snapping.
+TEST(SimulationRunTest, GPS_SetPosition_SuccessiveCalls_EachSnapsIndependently) {
+    MockGPS gps{Position3D{}, Orientation{}, 10.0 * isq::length[cm]};
+
+    gps.setPosition(Position3D{13.0 * x_extent[cm], 0.0 * y_extent[cm], 0.0 * z_extent[cm]});
+    EXPECT_DOUBLE_EQ(gps.position().x.numerical_value_in(cm), 10.0);
+
+    // Second call with a fresh raw value — should snap to 20, not snap from 10.
+    gps.setPosition(Position3D{17.0 * x_extent[cm], 0.0 * y_extent[cm], 0.0 * z_extent[cm]});
+    EXPECT_DOUBLE_EQ(gps.position().x.numerical_value_in(cm), 20.0);
+}
+
+/// Scenario: initial position passed to constructor is stored as-is (not snapped).
+/// The factory always provides validated on-grid positions, so constructor snapping
+/// is intentionally omitted; this test documents and guards that contract.
+TEST(SimulationRunTest, GPS_Constructor_InitialPositionNotSnapped) {
+    // 17.3 cm is off-grid for a 10 cm resolution, yet the constructor stores it raw.
+    MockGPS gps{
+        Position3D{17.3 * x_extent[cm], 0.0 * y_extent[cm], 0.0 * z_extent[cm]},
+        Orientation{},
+        10.0 * isq::length[cm]
+    };
+    EXPECT_DOUBLE_EQ(gps.position().x.numerical_value_in(cm), 17.3);
+}
+
 // ===========================================================================
 // MockMovement tests
 // ===========================================================================
