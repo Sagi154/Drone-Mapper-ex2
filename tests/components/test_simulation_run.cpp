@@ -670,5 +670,119 @@ TEST(SimulationRunTest, Movement_Elevate_CollisionBlocked_Rejected) {
     EXPECT_DOUBLE_EQ(gps.position().z.numerical_value_in(cm), 50.0);
 }
 
+// ===========================================================================
+// Collision geometry edge cases
+// ===========================================================================
+
+/// Scenario: zero-radius drone advances into a clear map.
+/// With radius=0 the sphere check samples only the exact centre voxel.
+/// Expected: success=true; position updated normally.
+TEST(SimulationRunTest, Movement_ZeroRadiusDrone_ClearCenter_Succeeds) {
+    const Position3D start{100.0 * x_extent[cm], 100.0 * y_extent[cm], 50.0 * z_extent[cm]};
+    MockGPS gps{start, Orientation{0.0 * horizontal_angle[deg], 0.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    auto cfg    = makeDefaultDroneConfig();
+    cfg.radius   = 0.0 * isq::length[cm];
+    MockMovement movement{gps, map, cfg};
+
+    const auto result = movement.advance(10.0 * isq::length[cm]);
+
+    EXPECT_TRUE(result.success);
+    EXPECT_NEAR(gps.position().x.numerical_value_in(cm), 110.0, 0.1);
+}
+
+/// Scenario: zero-radius drone advances into an occupied centre voxel.
+/// With radius=0 only the centre is checked; if it's occupied → blocked.
+/// Expected: success=false; position unchanged.
+TEST(SimulationRunTest, Movement_ZeroRadiusDrone_OccupiedCenter_Rejected) {
+    const Position3D start{100.0 * x_extent[cm], 100.0 * y_extent[cm], 50.0 * z_extent[cm]};
+    MockGPS gps{start, Orientation{0.0 * horizontal_angle[deg], 0.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+    NiceMapMock map;
+    const types::MapConfig cfg = makeMapConfig();
+    ON_CALL(map, getMapConfig()).WillByDefault(testing::Return(cfg));
+    ON_CALL(map, isInBounds(testing::_)).WillByDefault(testing::Return(true));
+    ON_CALL(map, atVoxel(testing::_))
+        .WillByDefault(testing::Return(types::VoxelOccupancy::Occupied));
+    auto dcfg  = makeDefaultDroneConfig();
+    dcfg.radius = 0.0 * isq::length[cm];
+    MockMovement movement{gps, map, dcfg};
+
+    const auto result = movement.advance(10.0 * isq::length[cm]);
+
+    EXPECT_FALSE(result.success);
+    EXPECT_DOUBLE_EQ(gps.position().x.numerical_value_in(cm), 100.0);
+}
+
+/// Scenario: drone sphere partially extends out of bounds even though the centre
+/// is in-bounds.  The check flags any OOB sample as a collision (the drone cannot
+/// clip through a wall it does not fit through).
+/// Expected: success=false when isInBounds returns false for sphere-edge samples.
+TEST(SimulationRunTest, Movement_Advance_SphericalEdgeOutOfBounds_Rejected) {
+    // Drone at (100, 100, 50), heading 0°, advance 10 → new centre (110, 100, 50).
+    // Radius = 5 cm.  We make any position with x > 112 report OOB — that captures
+    // the sphere cells at (+5 cm from 110 = 115 cm) which lie outside the boundary.
+    const Position3D start{100.0 * x_extent[cm], 100.0 * y_extent[cm], 50.0 * z_extent[cm]};
+    MockGPS gps{start, Orientation{0.0 * horizontal_angle[deg], 0.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+
+    NiceMapMock map;
+    const types::MapConfig cfg = makeMapConfig();
+    ON_CALL(map, getMapConfig()).WillByDefault(testing::Return(cfg));
+    // Positions with x > 112 are out-of-bounds (simulates wall 3 cm past new centre).
+    ON_CALL(map, isInBounds(testing::_)).WillByDefault(
+        testing::Invoke([](const Position3D& p) {
+            return p.x.numerical_value_in(cm) <= 112.0;
+        }));
+    ON_CALL(map, atVoxel(testing::_))
+        .WillByDefault(testing::Return(types::VoxelOccupancy::Empty));
+
+    MockMovement movement{gps, map, makeDefaultDroneConfig()};
+    const auto result = movement.advance(10.0 * isq::length[cm]);
+
+    EXPECT_FALSE(result.success);
+    EXPECT_DOUBLE_EQ(gps.position().x.numerical_value_in(cm), 100.0);
+}
+
+/// Scenario: negative elevate (descend) rejected when it exceeds max_elevate.
+/// The limit check uses std::abs so magnitude matters, not sign.
+/// Expected: success=false; z unchanged.
+TEST(SimulationRunTest, Movement_Elevate_NegativeExceedsLimit_Rejected) {
+    const Position3D start{100.0 * x_extent[cm], 100.0 * y_extent[cm], 50.0 * z_extent[cm]};
+    MockGPS gps{start, Orientation{}, 1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    auto cfg       = makeDefaultDroneConfig();
+    cfg.max_elevate = 10.0 * isq::length[cm];
+    MockMovement movement{gps, map, cfg};
+
+    // −50 cm has magnitude 50, which exceeds the 10-cm limit.
+    const auto result = movement.elevate(-50.0 * isq::length[cm]);
+
+    EXPECT_FALSE(result.success);
+    EXPECT_DOUBLE_EQ(gps.position().z.numerical_value_in(cm), 50.0);
+}
+
+/// Scenario: negative advance rejected when its magnitude exceeds max_advance.
+/// Expected: success=false; position unchanged.
+TEST(SimulationRunTest, Movement_Advance_NegativeExceedsLimit_Rejected) {
+    const Position3D start{100.0 * x_extent[cm], 100.0 * y_extent[cm], 50.0 * z_extent[cm]};
+    MockGPS gps{start, Orientation{0.0 * horizontal_angle[deg], 0.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    auto cfg       = makeDefaultDroneConfig();
+    cfg.max_advance = 5.0 * isq::length[cm];
+    MockMovement movement{gps, map, cfg};
+
+    // −30 cm, magnitude 30 > limit 5.
+    const auto result = movement.advance(-30.0 * isq::length[cm]);
+
+    EXPECT_FALSE(result.success);
+    EXPECT_DOUBLE_EQ(gps.position().x.numerical_value_in(cm), 100.0);
+}
+
 } // namespace
 } // namespace drone_mapper
