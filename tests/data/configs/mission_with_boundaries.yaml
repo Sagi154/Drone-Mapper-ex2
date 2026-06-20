@@ -1,0 +1,6 @@
+mission_config:
+  max_steps: 100
+  boundaries:
+    x_boundary:
+      min_cm: -500
+      max_cm: -30
