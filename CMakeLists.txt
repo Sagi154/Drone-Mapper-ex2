@@ -39,7 +39,7 @@ target_link_libraries(drone_mapper
     PUBLIC
         mp-units::mp-units
         TinyNPY::TinyNPY
-        #yaml-cpp::yaml-cpp you #you should add this when you actually use yaml parsing
+        # yaml-cpp::yaml-cpp  # uncomment when YAML parsing is implemented (Person A Phase 1)
 )
 
 add_executable(drone_mapper_simulation src/drone_mapper_simulation_main.cpp)
@@ -51,3 +51,7 @@ target_link_libraries(maps_comparison PRIVATE drone_mapper)
 # Compile the yaml example file
 add_executable(example_yml cpp_yaml_example/main.cpp)
 target_link_libraries(example_yml PRIVATE yaml-cpp::yaml-cpp)
+
+# Tests
+enable_testing()
+add_subdirectory(tests)
