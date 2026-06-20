@@ -326,7 +326,7 @@ sequenceDiagram
 
 The attached stub implementations are examples only. You should provide their own implementations for:
 
-- YAML parsing and composition loading.
+- YAML parsing and composition loading (`src/io/` — nested composition YAML expands to aligned `simulations[]`/`missions[]` pairs; `SimulationManager` must zip-index those vectors before cartesian with drones × lidars).
 - Mission execution and drone step loops.
 - Movement legality checks.
 - Output-map mutation and real `.npy` serialization.
