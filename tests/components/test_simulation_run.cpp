@@ -432,6 +432,125 @@ TEST(SimulationRunTest, Movement_Elevate_ExceedsLimit_Rejected) {
     EXPECT_DOUBLE_EQ(gps.position().z.numerical_value_in(cm), 50.0);
 }
 
+/// Scenario: advance zero distance — no movement but also no collision at current spot;
+/// with a clear map the call succeeds and position stays put.
+/// Expected: success=true; GPS position identical to before.
+TEST(SimulationRunTest, Movement_Advance_ZeroDistance_SucceedsPositionUnchanged) {
+    const Position3D start{100.0 * x_extent[cm], 100.0 * y_extent[cm], 50.0 * z_extent[cm]};
+    MockGPS gps{start, Orientation{0.0 * horizontal_angle[deg], 0.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    MockMovement movement{gps, map, makeDefaultDroneConfig()};
+
+    const auto result = movement.advance(0.0 * isq::length[cm]);
+
+    EXPECT_TRUE(result.success);
+    EXPECT_DOUBLE_EQ(gps.position().x.numerical_value_in(cm), 100.0);
+    EXPECT_DOUBLE_EQ(gps.position().y.numerical_value_in(cm), 100.0);
+}
+
+/// Scenario: advance exactly at max_advance — the limit check is strict (>), so the
+/// boundary value itself must be accepted.
+/// Expected: success=true; position updated.
+TEST(SimulationRunTest, Movement_Advance_ExactlyAtMaxLimit_Accepted) {
+    const Position3D start{100.0 * x_extent[cm], 100.0 * y_extent[cm], 50.0 * z_extent[cm]};
+    MockGPS gps{start, Orientation{0.0 * horizontal_angle[deg], 0.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    auto cfg       = makeDefaultDroneConfig();
+    cfg.max_advance = 50.0 * isq::length[cm];
+    MockMovement movement{gps, map, cfg};
+
+    const auto result = movement.advance(50.0 * isq::length[cm]); // == limit
+
+    EXPECT_TRUE(result.success);
+    EXPECT_NEAR(gps.position().x.numerical_value_in(cm), 150.0, 0.5);
+}
+
+/// Scenario: advance infinitesimally beyond max_advance must be rejected.
+/// Expected: success=false; position unchanged.
+TEST(SimulationRunTest, Movement_Advance_JustOverMaxLimit_Rejected) {
+    const Position3D start{100.0 * x_extent[cm], 100.0 * y_extent[cm], 50.0 * z_extent[cm]};
+    MockGPS gps{start, Orientation{0.0 * horizontal_angle[deg], 0.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    auto cfg       = makeDefaultDroneConfig();
+    cfg.max_advance = 50.0 * isq::length[cm];
+    MockMovement movement{gps, map, cfg};
+
+    const auto result = movement.advance(50.001 * isq::length[cm]);
+
+    EXPECT_FALSE(result.success);
+    EXPECT_DOUBLE_EQ(gps.position().x.numerical_value_in(cm), 100.0);
+}
+
+/// Scenario: elevate zero distance — sphere check on current position; with clear map succeeds.
+/// Expected: success=true; z unchanged.
+TEST(SimulationRunTest, Movement_Elevate_ZeroDistance_SucceedsZUnchanged) {
+    const Position3D start{100.0 * x_extent[cm], 100.0 * y_extent[cm], 50.0 * z_extent[cm]};
+    MockGPS gps{start, Orientation{}, 1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    MockMovement movement{gps, map, makeDefaultDroneConfig()};
+
+    const auto result = movement.elevate(0.0 * isq::length[cm]);
+
+    EXPECT_TRUE(result.success);
+    EXPECT_DOUBLE_EQ(gps.position().z.numerical_value_in(cm), 50.0);
+}
+
+/// Scenario: elevate exactly at max_elevate — boundary must be accepted (strict >).
+/// Expected: success=true; z updated.
+TEST(SimulationRunTest, Movement_Elevate_ExactlyAtMaxLimit_Accepted) {
+    const Position3D start{100.0 * x_extent[cm], 100.0 * y_extent[cm], 50.0 * z_extent[cm]};
+    MockGPS gps{start, Orientation{}, 1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    auto cfg       = makeDefaultDroneConfig();
+    cfg.max_elevate = 30.0 * isq::length[cm];
+    MockMovement movement{gps, map, cfg};
+
+    const auto result = movement.elevate(30.0 * isq::length[cm]);
+
+    EXPECT_TRUE(result.success);
+    EXPECT_NEAR(gps.position().z.numerical_value_in(cm), 80.0, 0.5);
+}
+
+/// Scenario: rotate zero angle — no-op rotation; heading unchanged and success.
+/// Expected: success=true; heading identical to before.
+TEST(SimulationRunTest, Movement_Rotate_ZeroAngle_SucceedsHeadingUnchanged) {
+    MockGPS gps{Position3D{}, Orientation{45.0 * horizontal_angle[deg], 0.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    MockMovement movement{gps, map, makeDefaultDroneConfig()};
+
+    const auto result = movement.rotate(types::RotationDirection::Left, 0.0 * horizontal_angle[deg]);
+
+    EXPECT_TRUE(result.success);
+    EXPECT_DOUBLE_EQ(gps.heading().horizontal.numerical_value_in(deg), 45.0);
+}
+
+/// Scenario: rotate exactly at max_rotate — boundary must be accepted (strict >).
+/// Expected: success=true; heading updated.
+TEST(SimulationRunTest, Movement_Rotate_ExactlyAtMaxLimit_Accepted) {
+    MockGPS gps{Position3D{}, Orientation{0.0 * horizontal_angle[deg], 0.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    auto cfg       = makeDefaultDroneConfig();
+    cfg.max_rotate  = 90.0 * horizontal_angle[deg];
+    MockMovement movement{gps, map, cfg};
+
+    const auto result = movement.rotate(types::RotationDirection::Left, 90.0 * horizontal_angle[deg]);
+
+    EXPECT_TRUE(result.success);
+    EXPECT_DOUBLE_EQ(gps.heading().horizontal.numerical_value_in(deg), 90.0);
+}
+
 /// Scenario: elevate into occupied voxel — collision detected; z unchanged.
 /// Expected: success=false; GPS z stays at 50 cm.
 TEST(SimulationRunTest, Movement_Elevate_CollisionBlocked_Rejected) {
