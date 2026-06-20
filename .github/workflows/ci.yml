@@ -36,13 +36,22 @@ jobs:
         run: |
           set -o pipefail
           mkdir -p ci-artifacts
-          docker buildx build \
+          if ! docker buildx build \
             --progress=plain \
             --load \
             --tag drone-mapper-ex2-ci:latest \
             --cache-from "type=gha,scope=${CACHE_SCOPE}" \
             --cache-to "type=gha,mode=max,scope=${CACHE_SCOPE}" \
-            . 2>&1 | tee ci-artifacts/docker-build.log
+            . 2>&1 | tee ci-artifacts/docker-build.log; then
+            {
+              echo "## Docker build failed"
+              echo '```'
+              grep -E 'error:|FAILED:|fatal error:' ci-artifacts/docker-build.log | tail -n 50 \
+                || tail -n 100 ci-artifacts/docker-build.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       # Run each labeled ctest suite separately. The labels are assigned in tests/CMakeLists.txt.
       - name: Run config tests

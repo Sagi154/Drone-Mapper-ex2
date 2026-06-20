@@ -17,7 +17,7 @@ ENV VCPKG_ROOT=/usr/local/vcpkg
 WORKDIR /workspace
 
 # Copy only what the CMake project needs (keeps build context small; see .dockerignore).
-COPY vcpkg.json vcpkg-configuration.json CMakeLists.txt CMakePresets.json ./
+COPY vcpkg.json CMakeLists.txt CMakePresets.json ./
 COPY include ./include
 COPY src ./src
 COPY tests ./tests
@@ -32,4 +32,5 @@ RUN cmake -G Ninja -S . -B build/ci \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_TOOLCHAIN_FILE="${VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake" \
         -DDRONE_MAPPER_BUILD_YAML_EXAMPLE=OFF \
+        -DCMAKE_GTEST_DISCOVER_TESTS_DISCOVERY_MODE=PRE_TEST \
     && cmake --build build/ci
