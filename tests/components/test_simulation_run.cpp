@@ -551,6 +551,106 @@ TEST(SimulationRunTest, Movement_Rotate_ExactlyAtMaxLimit_Accepted) {
     EXPECT_DOUBLE_EQ(gps.heading().horizontal.numerical_value_in(deg), 90.0);
 }
 
+/// Scenario: advance with negative distance (backward movement).
+/// The spec allows negative distance; the drone moves opposite to its heading.
+/// With heading 0° (+X) and distance −10 cm, x should decrease by 10.
+/// Expected: success=true; x decreases; y and z unchanged.
+TEST(SimulationRunTest, Movement_Advance_NegativeDistance_MovesBackward) {
+    const Position3D start{100.0 * x_extent[cm], 100.0 * y_extent[cm], 50.0 * z_extent[cm]};
+    MockGPS gps{start, Orientation{0.0 * horizontal_angle[deg], 0.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    MockMovement movement{gps, map, makeDefaultDroneConfig()};
+
+    const auto result = movement.advance(-10.0 * isq::length[cm]);
+
+    EXPECT_TRUE(result.success);
+    EXPECT_NEAR(gps.position().x.numerical_value_in(cm), 90.0, 0.1);
+    EXPECT_NEAR(gps.position().y.numerical_value_in(cm), 100.0, 0.1);
+    EXPECT_NEAR(gps.position().z.numerical_value_in(cm), 50.0, 0.1);
+}
+
+/// Scenario: advance must never change the drone's heading.
+/// Expected: horizontal and altitude heading values are identical before and after advance.
+TEST(SimulationRunTest, Movement_Advance_DoesNotChangeHeading) {
+    const Position3D start{100.0 * x_extent[cm], 100.0 * y_extent[cm], 50.0 * z_extent[cm]};
+    MockGPS gps{start, Orientation{135.0 * horizontal_angle[deg], 10.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    MockMovement movement{gps, map, makeDefaultDroneConfig()};
+
+    movement.advance(15.0 * isq::length[cm]);
+
+    EXPECT_DOUBLE_EQ(gps.heading().horizontal.numerical_value_in(deg), 135.0);
+    EXPECT_DOUBLE_EQ(gps.heading().altitude.numerical_value_in(deg),   10.0);
+}
+
+/// Scenario: elevate must never change the drone's heading.
+/// Expected: heading identical before and after elevate.
+TEST(SimulationRunTest, Movement_Elevate_DoesNotChangeHeading) {
+    const Position3D start{100.0 * x_extent[cm], 100.0 * y_extent[cm], 50.0 * z_extent[cm]};
+    MockGPS gps{start, Orientation{270.0 * horizontal_angle[deg], -5.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    MockMovement movement{gps, map, makeDefaultDroneConfig()};
+
+    movement.elevate(10.0 * isq::length[cm]);
+
+    EXPECT_DOUBLE_EQ(gps.heading().horizontal.numerical_value_in(deg), 270.0);
+    EXPECT_DOUBLE_EQ(gps.heading().altitude.numerical_value_in(deg),   -5.0);
+}
+
+/// Scenario: multiple rotate commands accumulate correctly.
+/// Rotate Right 30°, then Right 30° again → total −60° from start.
+/// Expected: final heading = −60° (or equivalently 300° in unsigned terms).
+TEST(SimulationRunTest, Movement_Rotate_AccumulatesAcrossMultipleCalls) {
+    MockGPS gps{Position3D{}, Orientation{0.0 * horizontal_angle[deg], 0.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    MockMovement movement{gps, map, makeDefaultDroneConfig()};
+
+    movement.rotate(types::RotationDirection::Right, 30.0 * horizontal_angle[deg]);
+    movement.rotate(types::RotationDirection::Right, 30.0 * horizontal_angle[deg]);
+
+    // Each Right rotation subtracts from heading: 0 − 30 − 30 = −60
+    EXPECT_DOUBLE_EQ(gps.heading().horizontal.numerical_value_in(deg), -60.0);
+}
+
+/// Scenario: alternating Left and Right rotations cancel out.
+/// Rotate Left 45° then Right 45° → net change of zero.
+/// Expected: heading returns to original value.
+TEST(SimulationRunTest, Movement_Rotate_LeftThenRightCancels) {
+    MockGPS gps{Position3D{}, Orientation{90.0 * horizontal_angle[deg], 0.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    MockMovement movement{gps, map, makeDefaultDroneConfig()};
+
+    movement.rotate(types::RotationDirection::Left,  45.0 * horizontal_angle[deg]);
+    movement.rotate(types::RotationDirection::Right, 45.0 * horizontal_angle[deg]);
+
+    EXPECT_DOUBLE_EQ(gps.heading().horizontal.numerical_value_in(deg), 90.0);
+}
+
+/// Scenario: heading can exceed 360° — MockMovement does not wrap; the algorithm
+/// is responsible for staying in [0, 360). This documents and guards the contract.
+/// Expected: heading = 370° after rotating 10° from 360°.
+TEST(SimulationRunTest, Movement_Rotate_HeadingExceeds360_NotWrapped) {
+    MockGPS gps{Position3D{}, Orientation{360.0 * horizontal_angle[deg], 0.0 * altitude_angle[deg]},
+                1.0 * isq::length[cm]};
+    NiceMapMock map;
+    setClearMap(map);
+    MockMovement movement{gps, map, makeDefaultDroneConfig()};
+
+    movement.rotate(types::RotationDirection::Left, 10.0 * horizontal_angle[deg]);
+
+    EXPECT_DOUBLE_EQ(gps.heading().horizontal.numerical_value_in(deg), 370.0);
+}
+
 /// Scenario: elevate into occupied voxel — collision detected; z unchanged.
 /// Expected: success=false; GPS z stays at 50 cm.
 TEST(SimulationRunTest, Movement_Elevate_CollisionBlocked_Rejected) {
