@@ -39,7 +39,7 @@ target_link_libraries(drone_mapper
     PUBLIC
         mp-units::mp-units
         TinyNPY::TinyNPY
-        # yaml-cpp::yaml-cpp  # uncomment when YAML parsing is implemented (Person A Phase 1)
+        # yaml-cpp::yaml-cpp
 )
 
 add_executable(drone_mapper_simulation src/drone_mapper_simulation_main.cpp)
