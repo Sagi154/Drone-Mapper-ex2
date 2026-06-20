@@ -61,16 +61,4 @@ add_executable(example_yml cpp_yaml_example/main.cpp)
 target_link_libraries(example_yml PRIVATE yaml-cpp::yaml-cpp)
 
 enable_testing()
-
-add_executable(drone_mapper_simulation_test
-    tests/components/test_map3d_impl.cpp
-    tests/components/test_yaml_config_parsers.cpp
-    tests/components/test_run_error_log.cpp
-    tests/components/test_simulation_run_factory.cpp
-)
-target_link_libraries(drone_mapper_simulation_test PRIVATE drone_mapper GTest::gtest_main)
-target_compile_definitions(drone_mapper_simulation_test
-    PRIVATE
-        DRONE_MAPPER_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
-)
-add_test(NAME drone_mapper_simulation_test COMMAND drone_mapper_simulation_test)
+add_subdirectory(tests)
