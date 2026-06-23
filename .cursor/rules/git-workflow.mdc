@@ -1,9 +1,11 @@
 ---
-description: Branch, PR, and commit naming — describe the work, not workplan roles or phases
+description: Git workflow — branch names, conventional commits, checkpoint commits, and PR conventions
 alwaysApply: true
 ---
 
-# Git Workflow Naming
+# Git Workflow
+
+How we name branches, write commits, open PRs, and pace commits during implementation.
 
 Names and messages describe **what changed**, not **who owns it** or **which workplan phase** it belongs to.
 
@@ -40,7 +42,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/): `<type>: <summ
 |-----|------|
 | `Phase 2 Person A: factory stub` | `feat: load hidden map in simulation run factory` |
 | `feature/a branch 1 work` | `fix: return score -1 when hidden map file is missing` |
-| `Add git naming rule` | `docs: add git naming rule for branches and PRs` |
+| `Add git naming rule` | `docs: add git workflow rule for branches and PRs` |
 | `Ignore temp/` | `chore: ignore temp/ for local notes` |
 
 **Type guide**
@@ -55,6 +57,24 @@ Use [Conventional Commits](https://www.conventionalcommits.org/): `<type>: <summ
 | `chore` | Tooling, gitignore, housekeeping |
 | `ci` | CI/CD workflows |
 | `build` | CMake, vcpkg, compile settings |
+
+## Commit granularity
+
+Commit like a human implementing a feature — **several small commits at natural checkpoints**, not one commit for everything at the end.
+
+- Commit when a **coherent slice** is done: compiles, a test passes, or one sub-behavior is wired
+- Typical checkpoint order: scaffolding → core logic → error paths → tests → docs
+- Each commit should be **reviewable on its own** — one concern, one message
+- Do **not** batch an entire feature into a single commit after all files are edited
+- Do **not** split artificially (one commit per file, or commits that don't build)
+
+| Bad (agent-style) | Good (human-style) |
+|-------------------|-------------------|
+| One commit with factory, run impl, tests, and docs | `feat: load hidden map in factory` then `feat: return -1 on factory startup errors` then `test: cover missing map in factory` |
+| `feat: implement SimulationRunImpl` (500 lines, 6 files) | `feat: call runMission from SimulationRunImpl` → `feat: score run with MapsComparison` |
+| Commit before code compiles | Commit after each checkpoint builds |
+
+When the user asks to "commit the changes", split by **logical checkpoints** in the order work was done — not one squash unless they explicitly ask for a single commit.
 
 ## PR titles
 
@@ -73,8 +93,9 @@ Use [Conventional Commits](https://www.conventionalcommits.org/): `<type>: <summ
 - Do **not** reference phase numbers, person assignments, or branch naming schemes
 - Link to code/components (`SimulationRunFactoryImpl`, `error.log`) instead of workplan sections
 
-## When creating branches, commits, or PRs
+## Checklist
 
 1. Pick a name from the **code change**, not `workplan.md` headings.
 2. If the only available name would include phase/person/role labels, rename before pushing.
 3. Rename existing branches that violate this rule when you next touch them.
+4. **Commit incrementally** as you implement — don't wait until the feature is finished.
