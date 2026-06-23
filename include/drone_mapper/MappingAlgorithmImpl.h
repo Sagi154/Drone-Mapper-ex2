@@ -32,8 +32,8 @@ public:
 
     MappingAlgorithmImpl(const MappingAlgorithmImpl&) = delete;
     MappingAlgorithmImpl& operator=(const MappingAlgorithmImpl&) = delete;
-    MappingAlgorithmImpl(MappingAlgorithmImpl&&) noexcept;
-    MappingAlgorithmImpl& operator=(MappingAlgorithmImpl&&) noexcept;
+    MappingAlgorithmImpl(MappingAlgorithmImpl&&) = delete;
+    MappingAlgorithmImpl& operator=(MappingAlgorithmImpl&&) = delete;
 
 private:
     enum class Phase { Scanning, Planning, Moving };

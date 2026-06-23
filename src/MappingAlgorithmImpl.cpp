@@ -74,9 +74,6 @@ struct MappingAlgorithmImpl::Impl {
 
 MappingAlgorithmImpl::~MappingAlgorithmImpl() = default;
 
-MappingAlgorithmImpl::MappingAlgorithmImpl(MappingAlgorithmImpl&&) noexcept = default;
-MappingAlgorithmImpl& MappingAlgorithmImpl::operator=(MappingAlgorithmImpl&&) noexcept = default;
-
 MappingAlgorithmImpl::MappingAlgorithmImpl(const types::MissionConfigData& mission_config,
                                            const types::LidarConfigData& lidar_config,
                                            const types::DroneConfigData& drone_config,
