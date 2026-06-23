@@ -113,6 +113,7 @@ SimulationRunFactoryImpl::create(const types::SimulationConfigData& simulation,
     auto drone_control = std::make_unique<DroneControlImpl>(
         drone,
         mission,
+        lidar,
         *lidar_impl,
         *gps,
         *movement,
