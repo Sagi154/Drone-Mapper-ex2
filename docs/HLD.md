@@ -337,8 +337,8 @@ Implemented (Phase 2 runtime + orchestration):
 - `SimulationManager::run()` — aggregates `SimulationManagerReport`, tracks `run_id` / `config_indices` during the cartesian product, and writes `simulation_output.yaml` via `src/io/SimulationOutputYamlWriter.cpp`.
 - `drone_mapper_simulation_main` — parses CLI args via `io::parseSimulationCliArgs`, loads composition YAML via `io::parseCompositionFile`, logs startup failures to stderr with `io::StderrErrorLog`, and returns gracefully on unreadable composition files.
 - YAML parsing and composition loading (`src/io/` — nested composition YAML expands to aligned `simulations[]`/`missions[]` pairs; `SimulationManager` zip-indexes those vectors before cartesian with drones × lidars).
+- `MapsComparison::compare` — union-of-known-cells scoring ported from ex1 `Scorer`; used by `SimulationRunImpl` and `maps_comparison` CLI.
 
 Still stub or incomplete:
 
 - Movement legality checks at simulation-run level (future).
-- Map comparison scoring logic (`MapsComparison::compare` — called from `SimulationRunImpl`; scoring math still stubbed).
