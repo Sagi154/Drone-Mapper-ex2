@@ -228,7 +228,8 @@ TEST(DroneControlTest, ExecutesMovementBeforeScanWhenBothRequested) {
 
     const types::DroneStepResult result = control.step();
     EXPECT_EQ(result.status, types::DroneStepStatus::Continue);
-    EXPECT_DOUBLE_EQ(fixture.gps.heading().horizontal.numerical_value_in(deg), 45.0);
+    // MockMovement: Rotate Right subtracts from heading (see SimulationRunTest.Movement_Rotate_WithinLimit).
+    EXPECT_DOUBLE_EQ(fixture.gps.heading().horizontal.numerical_value_in(deg), -45.0);
 }
 
 // What: movement driver rejects a command (e.g. exceeds per-command limit at driver).
