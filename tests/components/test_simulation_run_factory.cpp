@@ -30,7 +30,8 @@ namespace {
 }
 
 [[nodiscard]] types::MissionConfigData minimalMission() {
-    return types::MissionConfigData{100, 10.0 * cm, 1.0};
+    // Keep max_steps tiny: factory smoke tests call run()->runMission() with the real stack.
+    return types::MissionConfigData{5, 10.0 * cm, 1.0};
 }
 
 [[nodiscard]] types::DroneConfigData minimalDrone() {
