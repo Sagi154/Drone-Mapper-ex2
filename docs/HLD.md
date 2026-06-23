@@ -328,19 +328,17 @@ sequenceDiagram
 
 ## Current Stub Boundaries
 
-The attached stub implementations are examples only. You should provide their own implementations for:
+Implemented (Phase 2 runtime + orchestration):
 
-- Mission execution and drone step loops (`MissionControlImpl::runMission`).
-- Movement legality checks.
-- Output-map mutation and real `.npy` serialization.
-- Scan-to-voxel conversion.
-- Mapping algorithm behavior.
-- Map comparison scoring (`MapsComparison::compare` — `SimulationRunImpl` calls it; scoring logic still stubbed).
+- `DroneControlImpl::step` — movement-before-scan pipeline with `ScanResultToVoxels`.
+- `MappingAlgorithmImpl::nextStep` — scan-plan-move state machine with frontier BFS.
+- `MissionControlImpl::runMission` — loops `IDroneControl::step()` until completion, error, or `max_steps`; saves output map.
+- `SimulationRunImpl::run()` — calls `IMissionControl::runMission()`, copies `output_map_config`, scores via `MapsComparison` on `Completed`/`MaxSteps`, returns `mission_score: -1` on startup errors or `MissionRunStatus::Error`, and sets `resolution_request_status` from `output_mapping_resolution_factor`.
+- `SimulationManager::run()` — aggregates `SimulationManagerReport`, tracks `run_id` / `config_indices` during the cartesian product, and writes `simulation_output.yaml` via `src/io/SimulationOutputYamlWriter.cpp`.
+- `drone_mapper_simulation_main` — parses CLI args via `io::parseSimulationCliArgs`, loads composition YAML via `io::parseCompositionFile`, logs startup failures to stderr with `io::StderrErrorLog`, and returns gracefully on unreadable composition files.
+- YAML parsing and composition loading (`src/io/` — nested composition YAML expands to aligned `simulations[]`/`missions[]` pairs; `SimulationManager` zip-indexes those vectors before cartesian with drones × lidars).
 
-**Implemented:** `drone_mapper_simulation_main` parses CLI args via `io::parseSimulationCliArgs`, loads composition YAML via `io::parseCompositionFile`, logs startup failures to stderr with `io::StderrErrorLog`, and returns gracefully on unreadable composition files.
+Still stub or incomplete:
 
-**Implemented:** YAML parsing and composition loading (`src/io/` — nested composition YAML expands to aligned `simulations[]`/`missions[]` pairs; `SimulationManager` zip-indexes those vectors before cartesian with drones × lidars).
-
-**Implemented:** `SimulationRunImpl::run()` calls `IMissionControl::runMission()`, copies `output_map_config`, scores via `MapsComparison` on `Completed`/`MaxSteps`, returns `mission_score: -1` on startup errors or `MissionRunStatus::Error`, and sets `resolution_request_status` from `output_mapping_resolution_factor`.
-
-**Implemented:** `SimulationManager::run()` aggregates `SimulationManagerReport`, tracks `run_id` / `config_indices` during the cartesian product, and writes `simulation_output.yaml` via `src/io/SimulationOutputYamlWriter.cpp`.
+- Movement legality checks at simulation-run level (future).
+- Map comparison scoring logic (`MapsComparison::compare` — called from `SimulationRunImpl`; scoring math still stubbed).
