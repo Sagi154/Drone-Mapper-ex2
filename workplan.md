@@ -5,7 +5,7 @@
 
 ## Goal
 
-Ship a complete Assignment 2 submission: mandatory components, YAML/.npy I/O, tests with required GTest filters, graceful error handling, and a working (not necessarily optimal) mapping algorithm. Improve algorithm efficiency **only after** mandatory gates pass.
+Ship a complete Assignment 2 submission: mandatory components, YAML/.npy I/O, tests with required GTest filters, graceful error handling, and a working mapping algorithm. **Algorithm strategy:** port the ex1 algorithm logic as-is into the ex2 skeleton interfaces — no redesign or efficiency work needed. The algorithm was not the problem; failures during testing were caused by the maps used, not by the algorithm itself.
 
 ## Authority (when in doubt)
 
@@ -20,7 +20,7 @@ Ship a complete Assignment 2 submission: mandatory components, YAML/.npy I/O, te
 |-------|----------------------|
 | **Person A** | YAML parsing, `.npy` I/O, `Map3DImpl`, `SimulationManager`, output YAML, `output_results/` layout, error logger |
 | **Person B** | `MockGPS`/`MockMovement`, drone/mission runtime, `MappingAlgorithmImpl`, `MapsComparison`, test harness |
-| **Both** | Integration, Gate B/C review, Phase 5 efficiency, submission docs |
+| **Both** | Integration, Gate B/C review, Phase 5 submission polish, HLD/docs |
 
 **How to read "Owner":** primary implementer and reviewer for that component — **not** the only person working that week. Phases 2 and 3 overlap on purpose so neither person sits idle waiting on the other.
 
@@ -66,7 +66,7 @@ Day:  0    1    2    3    4    5    6    7    8    9   10   11   12
 
 ---
 
-## Phase 0 — Bootstrap (Day 0–1)
+## Phase 0 — Bootstrap (Day 0–1) ✅ DONE
 
 **Outcome:** Clean build from repo root; dev workflow agreed.
 
@@ -81,7 +81,7 @@ Day:  0    1    2    3    4    5    6    7    8    9   10   11   12
 
 ---
 
-## Phase 1 — Foundation (Days 1–3)
+## Phase 1 — Foundation (Days 1–3) ✅ DONE
 
 **Outcome:** Maps load/save; configs parse; errors log immediately.
 
@@ -109,7 +109,7 @@ Day:  0    1    2    3    4    5    6    7    8    9   10   11   12
 
 | Task | Files / notes |
 |------|---------------|
-| `MappingAlgorithmImpl::nextStep` — baseline frontier/BFS | Port **ideas** from `ExplorationFrontier` only · no `TickSnapshot` |
+| `MappingAlgorithmImpl::nextStep` — port ex1 algorithm as-is | Port **logic** from `ExplorationFrontier` · adapt to ex2 interfaces · no redesign needed (algorithm was correct; past failures were map-related) |
 | `DroneControlImpl::step` — movement → scan → voxels | Wire `ScanResultToVoxels` · first step `latest_scan == nullptr` |
 | `MissionControlImpl::runMission` — max_steps, status, save | `MissionRunResult` + errors |
 | `MapsComparison` + `maps_comparison` exe | stdout score only · stderr on error |
@@ -127,7 +127,7 @@ Day:  0    1    2    3    4    5    6    7    8    9   10   11   12
 **Gate A (full):** Minimal factory + B's runtime complete one mission on a tiny map and write output `.npy`.  
 *(Previously "manual factory wiring" — now explicitly **A + B**, not B alone.)*
 
-**Performance note:** Profile small maps early — target ~10s, hard limit ~1 min (b05s).
+**Performance note:** The ex1 algorithm itself is not slow. Past b05 concerns were caused by the specific maps used in testing. That said, **tests must still complete within ~10 s** — use small/synthetic maps in unit and component tests, and verify no single test blocks the suite.
 
 ---
 
@@ -177,19 +177,20 @@ Day:  0    1    2    3    4    5    6    7    8    9   10   11   12
 
 ---
 
-## Phase 5 — Efficiency & submission (Days 9–12, buffer)
+## Phase 5 — Submission polish (Days 9–12, buffer)
 
 **Start only after Gate C.**
 
+> **Algorithm note:** No efficiency work planned. The ex1 algorithm is kept as-is, refactored to fit ex2 interfaces. The previous timeout concern was caused by bad test maps, not the algorithm itself.
+
 | Task | Owner | Notes |
 |------|-------|-------|
-| Reduce redundant scans / stuck loops | Both | Deterministic fallback |
-| Step-count or runtime metrics in tests | Both | Guard against b05s regression |
+| Verify algorithm correctness on assignment-provided maps | Both | Confirm ex1 port behaves correctly end-to-end |
 | HLD PDF for submission | Both | From `docs/HLD.md` |
 | `bonus.txt` | Both | Only if claiming bonus |
 | Final multi-scenario sanity run | Both | Clean logs, reproducible scores |
 
-**Gate D:** Optional polish complete; submission package ready.
+**Gate D:** Submission package ready.
 
 ---
 
@@ -210,7 +211,7 @@ Day:  0    1    2    3    4    5    6    7    8    9   10   11   12
 |------|------------|
 | Late test harness | Create `tests/` + CMake in Phase 1, not Phase 4 |
 | `.npy` bugs | Golden tests on `data_maps/` first |
-| Algorithm timeout (b05s) | Profile in Phase 2; cap work per `nextStep` |
+| Test timeout (b05s) | Algorithm is fine; risk is map size in tests — use small/synthetic maps; enforce ~10 s per test |
 | A blocked waiting on B's runtime | A starts factory stub + fixtures in Phase 2 overlap (see timeline) |
 | Factory/runtime interface mismatch | H2 pair session on DI graph before A generalizes factory |
 | Copying bad ex1 patterns | `ex1-anti-patterns` rule + code review each PR |
