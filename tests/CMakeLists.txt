@@ -29,6 +29,7 @@ endfunction()
 add_drone_mapper_test_suite(drone_mapper_config_tests config
     components/test_yaml_config_parsers.cpp
     components/test_run_error_log.cpp
+    components/test_simulation_cli.cpp
 )
 
 add_drone_mapper_test_suite(drone_mapper_map_tests map
