@@ -1,5 +1,6 @@
 #include <drone_mapper/MissionControlImpl.h>
 
+#include <exception>
 #include <utility>
 
 namespace drone_mapper {
@@ -22,7 +23,11 @@ types::MissionRunResult MissionControlImpl::runMission() {
     (void)drone_;
     (void)hidden_map_;
     (void)drone_control_;
-    output_map_.save(output_map_file_);
+    try {
+        output_map_.save(output_map_file_);
+    } catch (const std::exception&) {
+        // readme: omit output_map.npy when no mission steps produced map data.
+    }
     return types::MissionRunResult{
         types::MissionRunStatus::Error,
         0,
