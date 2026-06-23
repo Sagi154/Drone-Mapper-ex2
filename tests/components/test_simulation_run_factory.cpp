@@ -3,14 +3,25 @@
 
 #include <gtest/gtest.h>
 
+#include <fstream>
 #include <filesystem>
+#include <string>
+#include <vector>
 
 namespace drone_mapper {
 namespace {
 
+[[nodiscard]] std::filesystem::path goldenMapPath() {
+#ifdef DRONE_MAPPER_SOURCE_DIR
+    return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR} / "data_maps" / "single_voxel_x2_y4_z2.npy";
+#else
+    return std::filesystem::path{"data_maps/single_voxel_x2_y4_z2.npy"};
+#endif
+}
+
 [[nodiscard]] types::SimulationConfigData minimalSimulation() {
     return types::SimulationConfigData{
-        "data_maps/single_voxel_x2_y4_z2.npy",
+        goldenMapPath(),
         10.0 * cm,
         Position3D{},
         Position3D{},
@@ -38,6 +49,16 @@ namespace {
         2.5 * cm,
         5,
     };
+}
+
+[[nodiscard]] std::vector<std::string> readAllLines(const std::filesystem::path& path) {
+    std::ifstream input(path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(input, line)) {
+        lines.push_back(line);
+    }
+    return lines;
 }
 
 } // namespace
@@ -73,6 +94,53 @@ TEST(SimulationRunFactory, UsesAgreedOutputLayoutForFirstRun) {
     EXPECT_TRUE(std::filesystem::exists(expected_error_log));
     EXPECT_EQ(expected_output_map.filename(), "output_map.npy");
     EXPECT_EQ(expected_output_map.parent_path(), expected_run_dir);
+
+    std::error_code ec;
+    std::filesystem::remove_all(output_path, ec);
+}
+
+TEST(SimulationRun, FactoryLoadsHiddenMapFromDisk) {
+    SimulationRunFactoryImpl factory;
+    const std::filesystem::path output_path =
+        std::filesystem::temp_directory_path() / "factory_hidden_map_load";
+
+    std::unique_ptr<ISimulationRun> run = factory.create(
+        minimalSimulation(), minimalMission(), minimalDrone(), minimalLidar(), output_path);
+    ASSERT_NE(run, nullptr);
+
+    const types::SimulationResult result = run->run();
+    EXPECT_DOUBLE_EQ(result.mission_score, 0.0);
+
+    const std::vector<std::string> lines = readAllLines(io::runErrorLog(output_path, 1));
+    EXPECT_TRUE(lines.empty());
+
+    std::error_code ec;
+    std::filesystem::remove_all(output_path, ec);
+}
+
+TEST(SimulationRun, FactoryLogsErrorWhenMapFileMissing) {
+    SimulationRunFactoryImpl factory;
+    const std::filesystem::path output_path =
+        std::filesystem::temp_directory_path() / "factory_missing_map";
+
+    types::SimulationConfigData simulation = minimalSimulation();
+    simulation.map_filename = "data_maps/does_not_exist.npy";
+
+    std::unique_ptr<ISimulationRun> run =
+        factory.create(simulation, minimalMission(), minimalDrone(), minimalLidar(), output_path);
+    ASSERT_NE(run, nullptr);
+
+    const types::SimulationResult result = run->run();
+    EXPECT_DOUBLE_EQ(result.mission_score, -1.0);
+    ASSERT_EQ(result.mission_results.size(), 1U);
+    EXPECT_EQ(result.mission_results.front().status, types::MissionRunStatus::Error);
+    ASSERT_EQ(result.mission_results.front().errors.size(), 1U);
+    EXPECT_EQ(result.mission_results.front().errors.front().code, "MAP_FILE_NOT_FOUND");
+
+    const std::vector<std::string> lines = readAllLines(io::runErrorLog(output_path, 1));
+    ASSERT_EQ(lines.size(), 1U);
+    EXPECT_NE(lines.front().find("MAP_FILE_NOT_FOUND"), std::string::npos);
+    EXPECT_NE(lines.front().find("does_not_exist.npy"), std::string::npos);
 
     std::error_code ec;
     std::filesystem::remove_all(output_path, ec);

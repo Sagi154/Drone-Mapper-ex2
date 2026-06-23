@@ -5,9 +5,10 @@ TAU Advanced Topics in Programming, Assignment 2. Course skeleton is merged at r
 ## Start here
 
 1. Read `.cursor/rules/project-context.mdc` (always applies).
-2. Before editing C++: `adv-cpp-standards.mdc`, `mp-units-strong-types.mdc`, `ex1-anti-patterns.mdc`.
-3. Before touching interfaces: `frozen-interfaces.mdc`.
-4. Before tests: `testing-requirements.mdc`.
+2. Before git branches, commits, or PRs: `git-workflow.mdc`.
+3. Before editing C++: `adv-cpp-standards.mdc`, `mp-units-strong-types.mdc`, `ex1-anti-patterns.mdc`.
+4. Before touching interfaces: `frozen-interfaces.mdc`.
+5. Before tests: `testing-requirements.mdc`.
 
 ## Skills (invoke by name)
 

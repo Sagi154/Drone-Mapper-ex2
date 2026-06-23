@@ -1,0 +1,112 @@
+---
+description: Git workflow — branch from updated main, branch names, conventional commits, checkpoint commits, and PR conventions
+alwaysApply: true
+---
+
+# Git Workflow
+
+How we name branches, write commits, open PRs, and pace commits during implementation.
+
+Names and messages describe **what changed**, not **who owns it** or **which workplan phase** it belongs to.
+
+## Never use in branch names, PR titles, commit messages, or PR bodies
+
+- Workplan roles: `person-a`, `person-b`, `owner-a`
+- Workplan phases: `phase-1`, `phase-2`, `phase-3`
+- Artificial path prefixes: `feature/a/...`, `feature/b/...`, `person-a/...`
+- Vague buckets: `runtime`, `orchestration`, `foundation` (unless naming a real component)
+
+`workplan.md` is for planning only — it must not leak into git metadata.
+
+## Branch names
+
+- **kebab-case**, lowercase
+- Name the component, feature, or fix: `<component-or-area>-<what-changed>`
+- One logical change per branch
+
+| Bad | Good |
+|-----|------|
+| `feature/a/factory-load-map` | `factory-load-hidden-map` |
+| `phase-2-simulation-run` | `simulation-run-impl` |
+| `person-a-orchestration` | `simulation-manager-yaml-output` |
+
+## Starting a new branch
+
+When the user asks you to start a new branch (to work on a new feature), **default to branching from an up-to-date `main`**:
+
+1. `git checkout main`
+2. `git pull` (sync local `main` with `origin/main`)
+3. `git checkout -b <branch-name>`
+
+Do this unless the user explicitly asks to branch from another base (e.g. an existing feature branch).
+
+## Commit messages
+
+Use [Conventional Commits](https://www.conventionalcommits.org/): `<type>: <summary>`.
+
+- **type**: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `build`
+- **summary**: imperative, lowercase after the colon, ≤ 72 chars total
+- **body** (optional): what changed and how to verify — no phase/person references
+
+| Bad | Good |
+|-----|------|
+| `Phase 2 Person A: factory stub` | `feat: load hidden map in simulation run factory` |
+| `feature/a branch 1 work` | `fix: return score -1 when hidden map file is missing` |
+| `Add git naming rule` | `docs: add git workflow rule for branches and PRs` |
+| `Ignore temp/` | `chore: ignore temp/ for local notes` |
+
+**Type guide**
+
+| Type | Use for |
+|------|---------|
+| `feat` | New behavior or component capability |
+| `fix` | Bug fix |
+| `refactor` | Code change without behavior change |
+| `test` | Tests only |
+| `docs` | README, HLD, AGENTS.md, cursor rules |
+| `chore` | Tooling, gitignore, housekeeping |
+| `ci` | CI/CD workflows |
+| `build` | CMake, vcpkg, compile settings |
+
+## Commit granularity
+
+Commit like a human implementing a feature — **several small commits at natural checkpoints**, not one commit for everything at the end.
+
+- Commit when a **coherent slice** is done: compiles, a test passes, or one sub-behavior is wired
+- Typical checkpoint order: scaffolding → core logic → error paths → tests → docs
+- Each commit should be **reviewable on its own** — one concern, one message
+- Do **not** batch an entire feature into a single commit after all files are edited
+- Do **not** split artificially (one commit per file, or commits that don't build)
+
+| Bad (agent-style) | Good (human-style) |
+|-------------------|-------------------|
+| One commit with factory, run impl, tests, and docs | `feat: load hidden map in factory` then `feat: return -1 on factory startup errors` then `test: cover missing map in factory` |
+| `feat: implement SimulationRunImpl` (500 lines, 6 files) | `feat: call runMission from SimulationRunImpl` → `feat: score run with MapsComparison` |
+| Commit before code compiles | Commit after each checkpoint builds |
+
+When the user asks to "commit the changes", split by **logical checkpoints** in the order work was done — not one squash unless they explicitly ask for a single commit.
+
+## PR titles
+
+- Prefer Conventional Commits style: `feat: …`, `fix: …`, `docs: …`
+- Same spirit as branch names — title the **deliverable**, not the sprint slot
+
+| Bad | Good |
+|-----|------|
+| `Phase 2 / Person A — factory` | `feat: load hidden map in SimulationRunFactoryImpl` |
+| `feature/a/factory-load-map` | `feat: load hidden .npy and log MAP_FILE_NOT_FOUND` |
+
+## PR descriptions
+
+- **Summary**: what the PR does and why (1–3 bullets)
+- **Test plan**: concrete commands or scenarios
+- Do **not** reference phase numbers, person assignments, or branch naming schemes
+- Link to code/components (`SimulationRunFactoryImpl`, `error.log`) instead of workplan sections
+
+## Checklist
+
+1. **New feature branch?** Update `main` from remote, then branch from it (see above).
+2. Pick a name from the **code change**, not `workplan.md` headings.
+3. If the only available name would include phase/person/role labels, rename before pushing.
+4. Rename existing branches that violate this rule when you next touch them.
+5. **Commit incrementally** as you implement — don't wait until the feature is finished.

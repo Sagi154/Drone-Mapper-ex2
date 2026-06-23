@@ -18,7 +18,8 @@ SimulationRunImpl::SimulationRunImpl(std::unique_ptr<const IMap3D> hidden_map,
                                      std::unique_ptr<IMissionControl> mission_control,
                                      types::SimulationConfigData simulation_config,
                                      types::MissionConfigData mission_config,
-                                     std::filesystem::path output_map_file)
+                                     std::filesystem::path output_map_file,
+                                     std::vector<types::ErrorRef> startup_errors)
     : hidden_map_(std::move(hidden_map)),
       output_map_(std::move(output_map)),
       gps_(std::move(gps)),
@@ -29,7 +30,8 @@ SimulationRunImpl::SimulationRunImpl(std::unique_ptr<const IMap3D> hidden_map,
       mission_control_(std::move(mission_control)),
       simulation_config_(std::move(simulation_config)),
       mission_config_(std::move(mission_config)),
-      output_map_file_(std::move(output_map_file)) {
+      output_map_file_(std::move(output_map_file)),
+      startup_errors_(std::move(startup_errors)) {
     if (!hidden_map_ ||
         !output_map_ ||
         !gps_ ||
@@ -43,6 +45,20 @@ SimulationRunImpl::SimulationRunImpl(std::unique_ptr<const IMap3D> hidden_map,
 }
 
 types::SimulationResult SimulationRunImpl::run() {
+    if (!startup_errors_.empty()) {
+        types::SimulationResult result{};
+        result.simulation_config = simulation_config_;
+        result.mission_config = mission_config_;
+        result.output_map_file = output_map_file_;
+        result.mission_score = -1.0;
+        result.mission_results.push_back(types::MissionRunResult{
+            types::MissionRunStatus::Error,
+            0,
+            startup_errors_,
+        });
+        return result;
+    }
+
     // Stub: touch injected deps so -Wunused-private-field stays clean under -Werror on Linux CI.
     (void)hidden_map_;
     (void)output_map_;
