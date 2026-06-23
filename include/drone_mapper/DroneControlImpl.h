@@ -9,11 +9,13 @@
 
 namespace drone_mapper {
 
+/// Executes one drone step: algorithm command, movement, scan, and voxel fusion.
 class DroneControlImpl final : public IDroneControl {
 public:
     DroneControlImpl(types::DroneConfigData drone,
                      types::MissionConfigData mission,
-                     ILidar& lidar,
+                     types::LidarConfigData lidar,
+                     ILidar& lidar_sensor,
                      IGPS& gps,
                      IDroneMovement& movement,
                      IMutableMap3D& output_map,
@@ -25,11 +27,14 @@ public:
 private:
     types::DroneConfigData drone_;
     types::MissionConfigData mission_;
-    ILidar& lidar_;
+    types::LidarConfigData lidar_;
+    ILidar& lidar_sensor_;
     IGPS& gps_;
     IDroneMovement& movement_;
     IMutableMap3D& output_map_;
     IMappingAlgorithm& mapping_algorithm_;
+    types::LidarScanResult latest_scan_{};
+    bool has_latest_scan_ = false;
     std::size_t step_index_ = 0;
 };
 
