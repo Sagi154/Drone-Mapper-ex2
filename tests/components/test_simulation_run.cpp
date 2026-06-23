@@ -1,14 +1,24 @@
 // test_simulation_run.cpp — SimulationRun.* (MockGPS and MockMovement)
 
+#include <drone_mapper/IDroneControl.h>
+#include <drone_mapper/ILidar.h>
+#include <drone_mapper/IMappingAlgorithm.h>
+#include <drone_mapper/IMissionControl.h>
+#include <drone_mapper/Map3DImpl.h>
 #include <drone_mapper/MockGPS.h>
 #include <drone_mapper/MockMovement.h>
+#include <drone_mapper/SimulationRunImpl.h>
 #include <drone_mapper/IMap3D.h>
 #include <drone_mapper/Types.h>
+
+#include <TinyNPY.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include <cmath>
+#include <filesystem>
+#include <memory>
 
 namespace drone_mapper {
 namespace {
@@ -22,6 +32,66 @@ public:
 };
 
 using NiceMapMock = testing::NiceMock<MapMock>;
+
+class LidarMock : public ILidar {
+public:
+    MOCK_METHOD(types::LidarScanResult, scan, (Orientation scan_orientation), (const, override));
+};
+
+class DroneControlMock : public IDroneControl {
+public:
+    MOCK_METHOD(types::DroneStepResult, step, (), (override));
+    MOCK_METHOD(types::DroneState, state, (), (const, override));
+};
+
+class MissionControlMock : public IMissionControl {
+public:
+    MOCK_METHOD(types::MissionRunResult, runMission, (), (override));
+};
+
+class MappingAlgorithmStub : public IMappingAlgorithm {
+public:
+    MappingAlgorithmStub(const types::MissionConfigData& mission,
+                         const types::LidarConfigData& lidar,
+                         const types::DroneConfigData& drone,
+                         const IMap3D& output_map)
+        : IMappingAlgorithm(mission, lidar, drone, output_map) {}
+
+    types::MappingStepCommand nextStep(const types::DroneState&,
+                                       const types::LidarScanResult*) override {
+        return {};
+    }
+};
+
+using NiceLidarMock = testing::NiceMock<LidarMock>;
+using NiceDroneControlMock = testing::NiceMock<DroneControlMock>;
+
+[[nodiscard]] types::LidarConfigData makeDefaultLidarConfig() {
+    return types::LidarConfigData{
+        0.0 * cm,
+        100.0 * cm,
+        5.0 * cm,
+        4,
+    };
+}
+
+[[nodiscard]] types::SimulationConfigData makeDefaultSimulationConfig() {
+    return types::SimulationConfigData{
+        .map_filename = "data_maps/test.npy",
+        .map_resolution = 10.0 * cm,
+        .map_offset = Position3D{},
+        .initial_drone_position = Position3D{},
+        .initial_angle = 0.0 * horizontal_angle[deg],
+    };
+}
+
+[[nodiscard]] types::MissionConfigData makeDefaultMissionConfig() {
+    return types::MissionConfigData{
+        .max_steps = 100,
+        .gps_resolution = 10.0 * cm,
+        .output_mapping_resolution_factor = 1.0,
+    };
+}
 
 types::DroneConfigData makeDefaultDroneConfig() {
     return {
@@ -53,6 +123,44 @@ void setClearMap(NiceMapMock& map) {
     ON_CALL(map, isInBounds(testing::_)).WillByDefault(testing::Return(true));
     ON_CALL(map, atVoxel(testing::_))
         .WillByDefault(testing::Return(types::VoxelOccupancy::Empty));
+}
+
+[[nodiscard]] std::unique_ptr<SimulationRunImpl> makeSimulationRun(
+    std::unique_ptr<IMissionControl> mission_control,
+    const std::filesystem::path& output_map_file,
+    types::SimulationConfigData simulation_config,
+    types::MissionConfigData mission_config,
+    std::vector<types::ErrorRef> startup_errors = {}) {
+    const types::MapConfig map_cfg = makeMapConfig();
+    auto hidden_array = std::make_shared<NpyArray>();
+    auto output_array = std::make_shared<NpyArray>();
+    auto hidden_map = std::make_unique<Map3DImpl>(hidden_array, map_cfg);
+    auto output_map = std::make_unique<Map3DImpl>(output_array, map_cfg);
+
+    auto gps = std::make_unique<MockGPS>(
+        simulation_config.initial_drone_position,
+        Orientation{simulation_config.initial_angle, 0.0 * altitude_angle[deg]},
+        mission_config.gps_resolution);
+    auto movement =
+        std::make_unique<MockMovement>(*gps, *hidden_map, makeDefaultDroneConfig());
+    auto lidar = std::make_unique<NiceLidarMock>();
+    auto mapping_algorithm = std::make_unique<MappingAlgorithmStub>(
+        mission_config, makeDefaultLidarConfig(), makeDefaultDroneConfig(), *output_map);
+    auto drone_control = std::make_unique<NiceDroneControlMock>();
+
+    return std::make_unique<SimulationRunImpl>(
+        std::unique_ptr<const IMap3D>(std::move(hidden_map)),
+        std::move(output_map),
+        std::move(gps),
+        std::move(movement),
+        std::move(lidar),
+        std::move(mapping_algorithm),
+        std::move(drone_control),
+        std::move(mission_control),
+        std::move(simulation_config),
+        std::move(mission_config),
+        output_map_file,
+        std::move(startup_errors));
 }
 
 TEST(SimulationRunTest, GPS_ReturnsInitialPosition) {
@@ -652,6 +760,124 @@ TEST(SimulationRunTest, Movement_Advance_NegativeExceedsLimit_Rejected) {
 
     EXPECT_FALSE(result.success);
     EXPECT_DOUBLE_EQ(gps.position().x.numerical_value_in(cm), 100.0);
+}
+
+TEST(SimulationRunTest, Run_MissionCompleted_ReturnsComparisonScore) {
+    auto mission_control = std::make_unique<MissionControlMock>();
+    EXPECT_CALL(*mission_control, runMission())
+        .WillOnce(testing::Return(types::MissionRunResult{
+            types::MissionRunStatus::Completed,
+            5,
+            {},
+        }));
+
+    const std::filesystem::path output_map_file = "output_results/run_0001/output_map.npy";
+    auto run = makeSimulationRun(
+        std::move(mission_control),
+        output_map_file,
+        makeDefaultSimulationConfig(),
+        makeDefaultMissionConfig());
+
+    const types::SimulationResult result = run->run();
+    EXPECT_DOUBLE_EQ(result.mission_score, 100.0);
+    ASSERT_EQ(result.mission_results.size(), 1U);
+    EXPECT_EQ(result.mission_results.front().status, types::MissionRunStatus::Completed);
+    EXPECT_EQ(result.mission_results.front().steps, 5U);
+}
+
+TEST(SimulationRunTest, Run_MissionError_ReturnsScoreMinusOne) {
+    auto mission_control = std::make_unique<MissionControlMock>();
+    EXPECT_CALL(*mission_control, runMission())
+        .WillOnce(testing::Return(types::MissionRunResult{
+            types::MissionRunStatus::Error,
+            0,
+            {types::ErrorRef{"DRONE_HITS_OBSTACLE", "collision"}},
+        }));
+
+    auto run = makeSimulationRun(
+        std::move(mission_control),
+        "output_results/run_0002/output_map.npy",
+        makeDefaultSimulationConfig(),
+        makeDefaultMissionConfig());
+
+    const types::SimulationResult result = run->run();
+    EXPECT_DOUBLE_EQ(result.mission_score, -1.0);
+    ASSERT_EQ(result.mission_results.size(), 1U);
+    EXPECT_EQ(result.mission_results.front().status, types::MissionRunStatus::Error);
+    ASSERT_EQ(result.mission_results.front().errors.size(), 1U);
+    EXPECT_EQ(result.mission_results.front().errors.front().code, "DRONE_HITS_OBSTACLE");
+}
+
+TEST(SimulationRunTest, Run_PopulatesOutputMapFileAndConfigs) {
+    auto mission_control = std::make_unique<MissionControlMock>();
+    EXPECT_CALL(*mission_control, runMission())
+        .WillOnce(testing::Return(types::MissionRunResult{
+            types::MissionRunStatus::Completed,
+            1,
+            {},
+        }));
+
+    const types::SimulationConfigData simulation_config = makeDefaultSimulationConfig();
+    types::MissionConfigData mission_config = makeDefaultMissionConfig();
+    mission_config.output_mapping_resolution_factor = 2.0;
+    const std::filesystem::path output_map_file = "output_results/run_0003/output_map.npy";
+
+    auto run = makeSimulationRun(
+        std::move(mission_control),
+        output_map_file,
+        simulation_config,
+        mission_config);
+
+    const types::SimulationResult result = run->run();
+    EXPECT_EQ(result.output_map_file, output_map_file);
+    EXPECT_EQ(result.simulation_config.map_filename, simulation_config.map_filename);
+    EXPECT_DOUBLE_EQ(
+        result.mission_config.output_mapping_resolution_factor,
+        mission_config.output_mapping_resolution_factor);
+    EXPECT_DOUBLE_EQ(result.output_map_config.resolution.numerical_value_in(cm), 1.0);
+    EXPECT_EQ(result.resolution_request_status, types::ResolutionRequestStatus::Accepted);
+}
+
+TEST(SimulationRunTest, Run_StartupErrors_SkipsMissionAndReturnsMinusOne) {
+    auto mission_control = std::make_unique<MissionControlMock>();
+    EXPECT_CALL(*mission_control, runMission()).Times(0);
+
+    const std::vector<types::ErrorRef> startup_errors{
+        types::ErrorRef{"MAP_FILE_NOT_FOUND", "missing.npy"},
+    };
+    auto run = makeSimulationRun(
+        std::move(mission_control),
+        "output_results/run_0004/output_map.npy",
+        makeDefaultSimulationConfig(),
+        makeDefaultMissionConfig(),
+        startup_errors);
+
+    const types::SimulationResult result = run->run();
+    EXPECT_DOUBLE_EQ(result.mission_score, -1.0);
+    ASSERT_EQ(result.mission_results.size(), 1U);
+    EXPECT_EQ(result.mission_results.front().status, types::MissionRunStatus::Error);
+    ASSERT_EQ(result.mission_results.front().errors.size(), 1U);
+    EXPECT_EQ(result.mission_results.front().errors.front().code, "MAP_FILE_NOT_FOUND");
+}
+
+TEST(SimulationRunTest, Run_MaxSteps_StillScores) {
+    auto mission_control = std::make_unique<MissionControlMock>();
+    EXPECT_CALL(*mission_control, runMission())
+        .WillOnce(testing::Return(types::MissionRunResult{
+            types::MissionRunStatus::MaxSteps,
+            100,
+            {},
+        }));
+
+    auto run = makeSimulationRun(
+        std::move(mission_control),
+        "output_results/run_0005/output_map.npy",
+        makeDefaultSimulationConfig(),
+        makeDefaultMissionConfig());
+
+    const types::SimulationResult result = run->run();
+    EXPECT_DOUBLE_EQ(result.mission_score, 100.0);
+    EXPECT_EQ(result.mission_results.front().status, types::MissionRunStatus::MaxSteps);
 }
 
 } // namespace
