@@ -109,7 +109,7 @@ TEST(SimulationRun, FactoryLoadsHiddenMapFromDisk) {
     ASSERT_NE(run, nullptr);
 
     const types::SimulationResult result = run->run();
-    EXPECT_DOUBLE_EQ(result.mission_score, 0.0);
+    EXPECT_EQ(result.simulation_config.map_filename, goldenMapPath());
 
     const std::vector<std::string> lines = readAllLines(io::runErrorLog(output_path, 1));
     EXPECT_TRUE(lines.empty());

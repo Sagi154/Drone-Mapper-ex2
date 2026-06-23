@@ -8,6 +8,32 @@
 
 namespace drone_mapper {
 
+namespace {
+
+[[nodiscard]] types::ResolutionRequestStatus resolutionRequestStatus(double factor) {
+    if (factor < 1.0) {
+        return types::ResolutionRequestStatus::IgnoredTooSmall;
+    }
+    if (factor > 1.0) {
+        return types::ResolutionRequestStatus::Accepted;
+    }
+    return types::ResolutionRequestStatus::Ignored;
+}
+
+[[nodiscard]] types::SimulationResult baseResult(const types::SimulationConfigData& simulation_config,
+                                                 const types::MissionConfigData& mission_config,
+                                                 const std::filesystem::path& output_map_file) {
+    types::SimulationResult result{};
+    result.simulation_config = simulation_config;
+    result.mission_config = mission_config;
+    result.output_map_file = output_map_file;
+    result.resolution_request_status =
+        resolutionRequestStatus(mission_config.output_mapping_resolution_factor);
+    return result;
+}
+
+} // namespace
+
 SimulationRunImpl::SimulationRunImpl(std::unique_ptr<const IMap3D> hidden_map,
                                      std::unique_ptr<IMutableMap3D> output_map,
                                      std::unique_ptr<IGPS> gps,
@@ -45,11 +71,10 @@ SimulationRunImpl::SimulationRunImpl(std::unique_ptr<const IMap3D> hidden_map,
 }
 
 types::SimulationResult SimulationRunImpl::run() {
+    types::SimulationResult result =
+        baseResult(simulation_config_, mission_config_, output_map_file_);
+
     if (!startup_errors_.empty()) {
-        types::SimulationResult result{};
-        result.simulation_config = simulation_config_;
-        result.mission_config = mission_config_;
-        result.output_map_file = output_map_file_;
         result.mission_score = -1.0;
         result.mission_results.push_back(types::MissionRunResult{
             types::MissionRunStatus::Error,
@@ -59,19 +84,19 @@ types::SimulationResult SimulationRunImpl::run() {
         return result;
     }
 
-    // Stub: touch injected deps so -Wunused-private-field stays clean under -Werror on Linux CI.
-    (void)hidden_map_;
-    (void)output_map_;
-    (void)gps_;
-    (void)movement_;
-    (void)lidar_;
-    (void)mapping_algorithm_;
-    (void)drone_control_;
-    (void)mission_control_;
-    (void)simulation_config_;
-    (void)mission_config_;
-    (void)output_map_file_;
-    return types::SimulationResult{};
+    const types::MissionRunResult mission_result = mission_control_->runMission();
+    result.mission_results.push_back(mission_result);
+    result.output_map_config = output_map_->getMapConfig();
+
+    if (mission_result.status == types::MissionRunStatus::Error) {
+        result.mission_score = -1.0;
+        return result;
+    }
+
+    const std::vector<double> scores =
+        MapsComparison::compare(*hidden_map_, {output_map_.get()});
+    result.mission_score = scores.empty() ? -1.0 : scores.front();
+    return result;
 }
 
 } // namespace drone_mapper
