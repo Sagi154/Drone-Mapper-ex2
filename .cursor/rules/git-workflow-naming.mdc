@@ -1,0 +1,80 @@
+---
+description: Branch, PR, and commit naming — describe the work, not workplan roles or phases
+alwaysApply: true
+---
+
+# Git Workflow Naming
+
+Names and messages describe **what changed**, not **who owns it** or **which workplan phase** it belongs to.
+
+## Never use in branch names, PR titles, commit messages, or PR bodies
+
+- Workplan roles: `person-a`, `person-b`, `owner-a`
+- Workplan phases: `phase-1`, `phase-2`, `phase-3`
+- Artificial path prefixes: `feature/a/...`, `feature/b/...`, `person-a/...`
+- Vague buckets: `runtime`, `orchestration`, `foundation` (unless naming a real component)
+
+`workplan.md` is for planning only — it must not leak into git metadata.
+
+## Branch names
+
+- **kebab-case**, lowercase
+- Name the component, feature, or fix: `<component-or-area>-<what-changed>`
+- One logical change per branch
+
+| Bad | Good |
+|-----|------|
+| `feature/a/factory-load-map` | `factory-load-hidden-map` |
+| `phase-2-simulation-run` | `simulation-run-impl` |
+| `person-a-orchestration` | `simulation-manager-yaml-output` |
+
+## Commit messages
+
+Use [Conventional Commits](https://www.conventionalcommits.org/): `<type>: <summary>`.
+
+- **type**: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`, `ci`, `build`
+- **summary**: imperative, lowercase after the colon, ≤ 72 chars total
+- **body** (optional): what changed and how to verify — no phase/person references
+
+| Bad | Good |
+|-----|------|
+| `Phase 2 Person A: factory stub` | `feat: load hidden map in simulation run factory` |
+| `feature/a branch 1 work` | `fix: return score -1 when hidden map file is missing` |
+| `Add git naming rule` | `docs: add git naming rule for branches and PRs` |
+| `Ignore temp/` | `chore: ignore temp/ for local notes` |
+
+**Type guide**
+
+| Type | Use for |
+|------|---------|
+| `feat` | New behavior or component capability |
+| `fix` | Bug fix |
+| `refactor` | Code change without behavior change |
+| `test` | Tests only |
+| `docs` | README, HLD, AGENTS.md, cursor rules |
+| `chore` | Tooling, gitignore, housekeeping |
+| `ci` | CI/CD workflows |
+| `build` | CMake, vcpkg, compile settings |
+
+## PR titles
+
+- Prefer Conventional Commits style: `feat: …`, `fix: …`, `docs: …`
+- Same spirit as branch names — title the **deliverable**, not the sprint slot
+
+| Bad | Good |
+|-----|------|
+| `Phase 2 / Person A — factory` | `feat: load hidden map in SimulationRunFactoryImpl` |
+| `feature/a/factory-load-map` | `feat: load hidden .npy and log MAP_FILE_NOT_FOUND` |
+
+## PR descriptions
+
+- **Summary**: what the PR does and why (1–3 bullets)
+- **Test plan**: concrete commands or scenarios
+- Do **not** reference phase numbers, person assignments, or branch naming schemes
+- Link to code/components (`SimulationRunFactoryImpl`, `error.log`) instead of workplan sections
+
+## When creating branches, commits, or PRs
+
+1. Pick a name from the **code change**, not `workplan.md` headings.
+2. If the only available name would include phase/person/role labels, rename before pushing.
+3. Rename existing branches that violate this rule when you next touch them.
