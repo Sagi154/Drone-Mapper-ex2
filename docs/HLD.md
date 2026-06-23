@@ -327,10 +327,12 @@ sequenceDiagram
 The attached stub implementations are examples only. You should provide their own implementations for:
 
 - YAML parsing and composition loading (`src/io/` — nested composition YAML expands to aligned `simulations[]`/`missions[]` pairs; `SimulationManager` must zip-index those vectors before cartesian with drones × lidars).
-- Mission execution and drone step loops.
+- Mission execution and drone step loops (`MissionControlImpl::runMission`).
 - Movement legality checks.
 - Output-map mutation and real `.npy` serialization.
 - Scan-to-voxel conversion.
 - Mapping algorithm behavior.
-- Map comparison scoring.
+- Map comparison scoring (`MapsComparison::compare` — `SimulationRunImpl` calls it; scoring logic still stubbed).
 - Simulation output writing and error-log writing.
+
+**Implemented:** `SimulationRunImpl::run()` calls `IMissionControl::runMission()`, copies `output_map_config`, scores via `MapsComparison` on `Completed`/`MaxSteps`, returns `mission_score: -1` on startup errors or `MissionRunStatus::Error`, and sets `resolution_request_status` from `output_mapping_resolution_factor`.
