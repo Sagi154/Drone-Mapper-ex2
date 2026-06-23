@@ -39,3 +39,7 @@ add_drone_mapper_test_suite(drone_mapper_simulation_tests simulation
     components/test_simulation_run.cpp
     components/test_simulation_run_factory.cpp
 )
+
+add_drone_mapper_test_suite(drone_mapper_runtime_tests runtime
+    components/test_mission_control.cpp
+)

@@ -1,3 +1,4 @@
+// MissionControlImpl — mission-level step loop; saves output map before returning.
 #include <drone_mapper/MissionControlImpl.h>
 
 #include <utility>
@@ -18,15 +19,41 @@ MissionControlImpl::MissionControlImpl(types::MissionConfigData mission,
       output_map_file_(std::move(output_map_file)) {}
 
 types::MissionRunResult MissionControlImpl::runMission() {
-    (void)mission_;
     (void)drone_;
     (void)hidden_map_;
-    (void)drone_control_;
+
+    std::size_t steps = 0;
+    for (std::size_t attempt = 0; attempt < mission_.max_steps; ++attempt) {
+        const types::DroneStepResult step_result = drone_control_.step();
+        ++steps;
+
+        if (step_result.status == types::DroneStepStatus::Completed) {
+            output_map_.save(output_map_file_);
+            return types::MissionRunResult{
+                types::MissionRunStatus::Completed,
+                steps,
+                {},
+            };
+        }
+
+        if (step_result.status == types::DroneStepStatus::Error) {
+            output_map_.save(output_map_file_);
+            return types::MissionRunResult{
+                types::MissionRunStatus::Error,
+                steps,
+                {types::ErrorRef{
+                    "DRONE_STEP_ERROR",
+                    step_result.message.empty() ? "Drone step failed." : step_result.message,
+                }},
+            };
+        }
+    }
+
     output_map_.save(output_map_file_);
     return types::MissionRunResult{
-        types::MissionRunStatus::Error,
-        0,
-        {types::ErrorRef{"MISSION_CONTROL_NOT_IMPLEMENTED", "MissionControlImpl::runMission is a stub."}},
+        types::MissionRunStatus::MaxSteps,
+        steps,
+        {},
     };
 }
 
