@@ -230,17 +230,21 @@ sequenceDiagram
     participant Factory as ISimulationRunFactory
     participant Run as ISimulationRun
 
-    Main->>Main: obtain SimulationCompositionData
-    Main->>Factory: construct SimulationRunFactoryImpl
-    Main->>Manager: construct with run factory
-    Main->>Manager: run(composition, output_path)
-    loop every simulation/mission/drone/lidar combination
-        Manager->>Factory: create(simulation, mission, drone, lidar, output_path)
-        Factory-->>Manager: fully wired SimulationRunImpl
-        Manager->>Run: run()
-        Run-->>Manager: SimulationResult
+    Main->>Main: parseSimulationCliArgs and parseCompositionFile
+    alt composition parse failed
+        Main->>Main: log errors to stderr and return 1
+    else composition ok
+        Main->>Factory: construct SimulationRunFactoryImpl
+        Main->>Manager: construct with run factory
+        Main->>Manager: run(composition, output_path)
+        loop every simulation/mission/drone/lidar combination
+            Manager->>Factory: create(simulation, mission, drone, lidar, output_path)
+            Factory-->>Manager: fully wired SimulationRunImpl
+            Manager->>Run: run()
+            Run-->>Manager: SimulationResult
+        end
+        Manager-->>Main: SimulationManagerReport
     end
-    Manager-->>Main: SimulationManagerReport
 ```
 
 ## Factory Wiring Flow
@@ -326,13 +330,16 @@ sequenceDiagram
 
 The attached stub implementations are examples only. You should provide their own implementations for:
 
-- YAML parsing and composition loading (`src/io/` — nested composition YAML expands to aligned `simulations[]`/`missions[]` pairs; `SimulationManager` must zip-index those vectors before cartesian with drones × lidars).
 - Mission execution and drone step loops (`MissionControlImpl::runMission`).
 - Movement legality checks.
 - Output-map mutation and real `.npy` serialization.
 - Scan-to-voxel conversion.
 - Mapping algorithm behavior.
 - Map comparison scoring (`MapsComparison::compare` — `SimulationRunImpl` calls it; scoring logic still stubbed).
+
+**Implemented:** `drone_mapper_simulation_main` parses CLI args via `io::parseSimulationCliArgs`, loads composition YAML via `io::parseCompositionFile`, logs startup failures to stderr with `io::StderrErrorLog`, and returns gracefully on unreadable composition files.
+
+**Implemented:** YAML parsing and composition loading (`src/io/` — nested composition YAML expands to aligned `simulations[]`/`missions[]` pairs; `SimulationManager` zip-indexes those vectors before cartesian with drones × lidars).
 
 **Implemented:** `SimulationRunImpl::run()` calls `IMissionControl::runMission()`, copies `output_map_config`, scores via `MapsComparison` on `Completed`/`MaxSteps`, returns `mission_score: -1` on startup errors or `MissionRunStatus::Error`, and sets `resolution_request_status` from `output_mapping_resolution_factor`.
 

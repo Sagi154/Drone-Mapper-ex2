@@ -34,6 +34,8 @@ add_library(drone_mapper
     src/io/LidarConfigYamlParser.cpp
     src/io/SimulationConfigYamlParser.cpp
     src/io/CompositionYamlParser.cpp
+    src/io/SimulationCli.cpp
+    src/io/StderrErrorLog.cpp
 )
 
 target_compile_features(drone_mapper PUBLIC cxx_std_20)
