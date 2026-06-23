@@ -256,6 +256,9 @@ GridKey quantizePosition(const Position3D& pos, const types::MapConfig& config) 
 
 bool hasNotMappedInSphere(const IMap3D& map, const Position3D& centre, PhysicalLength radius) {
     const double step = gridStepCm(map.getMapConfig());
+    if (step <= 0.0) {
+        return false;
+    }
     const double radius_cm = radius.force_numerical_value_in(cm);
     return sphereContainsNotMapped(map, centre, radius_cm, step);
 }
@@ -263,6 +266,9 @@ bool hasNotMappedInSphere(const IMap3D& map, const Position3D& centre, PhysicalL
 bool hasAnyNotMappedInBounds(const IMap3D& map) {
     const types::MapConfig config = map.getMapConfig();
     const double step = gridStepCm(config);
+    if (step <= 0.0) {
+        return false;
+    }
     const types::MappingBounds& bounds = config.boundaries;
 
     const double min_x = bounds.min_x.force_numerical_value_in(cm);

@@ -84,6 +84,9 @@ MappingAlgorithmImpl::MappingAlgorithmImpl(const types::MissionConfigData& missi
 std::size_t MappingAlgorithmImpl::countMappedCells() const {
     const types::MapConfig config = output_map_.getMapConfig();
     const double step = gridStepCm(config);
+    if (step <= 0.0) {
+        return 0;
+    }
     const types::MappingBounds& bounds = config.boundaries;
 
     const double min_x = bounds.min_x.force_numerical_value_in(cm);
