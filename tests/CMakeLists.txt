@@ -55,3 +55,7 @@ target_include_directories(drone_mapper_algorithm_tests
 add_drone_mapper_test_suite(drone_mapper_drone_tests drone
     components/test_drone_control.cpp
 )
+
+add_drone_mapper_test_suite(drone_mapper_mission_tests mission
+    components/test_mission_control.cpp
+)
