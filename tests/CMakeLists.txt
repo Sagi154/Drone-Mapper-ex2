@@ -49,3 +49,7 @@ target_include_directories(drone_mapper_algorithm_tests
     PRIVATE
         ${CMAKE_SOURCE_DIR}/src
 )
+
+add_drone_mapper_test_suite(drone_mapper_drone_tests drone
+    components/test_drone_control.cpp
+)

@@ -66,6 +66,16 @@ jobs:
           docker run --rm drone-mapper-ex2-ci:latest \
             ctest --test-dir build/ci -L simulation --output-on-failure
 
+      - name: Run algorithm tests
+        run: |
+          docker run --rm drone-mapper-ex2-ci:latest \
+            ctest --test-dir build/ci -L algorithm --output-on-failure
+
+      - name: Run drone tests
+        run: |
+          docker run --rm drone-mapper-ex2-ci:latest \
+            ctest --test-dir build/ci -L drone --output-on-failure
+
       - name: Upload CI logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
