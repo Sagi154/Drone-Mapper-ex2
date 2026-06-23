@@ -93,6 +93,9 @@ types::SimulationResult SimulationRunImpl::run() {
         return result;
     }
 
+    const std::vector<double> scores =
+        MapsComparison::compare(*hidden_map_, {output_map_.get()});
+    result.mission_score = scores.empty() ? -1.0 : scores.front();
     return result;
 }
 
