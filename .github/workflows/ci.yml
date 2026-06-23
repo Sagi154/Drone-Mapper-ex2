@@ -1,0 +1,94 @@
+# Runs the same Linux + vcpkg pipeline as Dockerfile (configure, build) then exercises
+# the test binaries as separate CI steps so each suite surfaces individually in the UI.
+name: CI
+
+permissions:
+  contents: read
+  # Docker BuildKit cache backend (cache-to type=gha) uses the Actions cache API.
+  actions: write
+  pull-requests: write
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  docker-build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # BuildKit + GitHub Actions cache backend speeds up repeated vcpkg/CMake layers.
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build CI image (configure, build)
+        env:
+          CACHE_SCOPE: drone-mapper-ex2-ci
+        run: |
+          set -o pipefail
+          mkdir -p ci-artifacts
+          if ! docker buildx build \
+            --progress=plain \
+            --load \
+            --tag drone-mapper-ex2-ci:latest \
+            --cache-from "type=gha,scope=${CACHE_SCOPE}" \
+            --cache-to "type=gha,mode=max,scope=${CACHE_SCOPE}" \
+            . 2>&1 | tee ci-artifacts/docker-build.log; then
+            echo "=== Docker build failed ==="
+            grep -E 'error:|FAILED:|fatal error:' ci-artifacts/docker-build.log | tail -n 50 \
+              || tail -n 100 ci-artifacts/docker-build.log
+            exit 1
+          fi
+
+      # Run each labeled ctest suite separately. The labels are assigned in tests/CMakeLists.txt.
+      - name: Run config tests
+        run: |
+          docker run --rm drone-mapper-ex2-ci:latest \
+            ctest --test-dir build/ci -L config --output-on-failure
+
+      - name: Run map tests
+        run: |
+          docker run --rm drone-mapper-ex2-ci:latest \
+            ctest --test-dir build/ci -L map --output-on-failure
+
+      - name: Run simulation tests
+        run: |
+          docker run --rm drone-mapper-ex2-ci:latest \
+            ctest --test-dir build/ci -L simulation --output-on-failure
+
+      - name: Upload CI logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-docker-build-log
+          path: ci-artifacts/docker-build.log
+          if-no-files-found: warn
+
+      - name: Comment build errors on PR
+        if: failure() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const log = fs.readFileSync('ci-artifacts/docker-build.log', 'utf8');
+            const lines = log.split('\n');
+            const errors = lines.filter((line) => /error:|FAILED:|fatal error:/.test(line)).slice(-50);
+            const body = errors.length > 0
+              ? ['## Docker build failed', '```', ...errors, '```'].join('\n')
+              : ['## Docker build failed', '```', ...lines.slice(-100), '```'].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });

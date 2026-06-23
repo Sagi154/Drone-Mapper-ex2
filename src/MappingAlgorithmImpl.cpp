@@ -9,6 +9,10 @@ types::MappingStepCommand MappingAlgorithmImpl::nextStep(const types::DroneState
                                                        const types::LidarScanResult* latest_scan) {
     (void)state;
     (void)latest_scan;
+    (void)mission_config_;
+    (void)lidar_config_;
+    (void)drone_config_;
+    (void)output_map_;
     return types::MappingStepCommand{};
 }
 

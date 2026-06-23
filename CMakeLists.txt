@@ -2,9 +2,10 @@ cmake_minimum_required(VERSION 3.15)
 project(drone_mapper LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 
+option(DRONE_MAPPER_BUILD_YAML_EXAMPLE "Build the course yaml-cpp example executable" ON)
 
 find_package(mp-units CONFIG REQUIRED)
-find_package(tinynpy CONFIG REQUIRED)
+find_package(TinyNPY CONFIG REQUIRED)
 find_package(yaml-cpp REQUIRED) # new!
 find_package(GTest CONFIG REQUIRED)
 
@@ -56,9 +57,10 @@ target_link_libraries(drone_mapper_simulation PRIVATE drone_mapper)
 add_executable(maps_comparison src/maps_comparison_main.cpp)
 target_link_libraries(maps_comparison PRIVATE drone_mapper)
 
-# Compile the yaml example file
-add_executable(example_yml cpp_yaml_example/main.cpp)
-target_link_libraries(example_yml PRIVATE yaml-cpp::yaml-cpp)
+if(DRONE_MAPPER_BUILD_YAML_EXAMPLE)
+    add_executable(example_yml cpp_yaml_example/main.cpp)
+    target_link_libraries(example_yml PRIVATE yaml-cpp::yaml-cpp)
+endif()
 
 enable_testing()
 add_subdirectory(tests)

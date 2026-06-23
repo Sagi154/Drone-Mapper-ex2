@@ -18,6 +18,10 @@ MissionControlImpl::MissionControlImpl(types::MissionConfigData mission,
       output_map_file_(std::move(output_map_file)) {}
 
 types::MissionRunResult MissionControlImpl::runMission() {
+    (void)mission_;
+    (void)drone_;
+    (void)hidden_map_;
+    (void)drone_control_;
     output_map_.save(output_map_file_);
     return types::MissionRunResult{
         types::MissionRunStatus::Error,
