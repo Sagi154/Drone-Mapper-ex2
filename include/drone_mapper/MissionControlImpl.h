@@ -18,6 +18,7 @@ public:
                        IDroneControl& drone_control,
                        std::filesystem::path output_map_file);
 
+    /// Runs the mission step loop until completion, error, or max_steps; saves the output map.
     [[nodiscard]] types::MissionRunResult runMission() override;
 
 private:

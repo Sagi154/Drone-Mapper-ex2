@@ -31,6 +31,18 @@ namespace {
     };
 }
 
+[[nodiscard]] types::MapConfig outputMapConfig(const types::SimulationConfigData& simulation,
+                                               const types::MissionConfigData& mission,
+                                               const Map3DImpl& hidden_map) {
+    types::MapConfig config = hidden_map.getMapConfig();
+    const double factor = mission.output_mapping_resolution_factor >= 1.0
+                              ? mission.output_mapping_resolution_factor
+                              : 1.0;
+    const double hidden_cm = simulation.map_resolution.force_numerical_value_in(cm);
+    config.resolution = (hidden_cm / factor) * cm;
+    return config;
+}
+
 [[nodiscard]] std::filesystem::path resolveMapPath(const std::filesystem::path& map_filename) {
     if (map_filename.empty()) {
         return map_filename;
@@ -100,7 +112,8 @@ SimulationRunFactoryImpl::create(const types::SimulationConfigData& simulation,
         hidden_map_load.map
             ? std::move(hidden_map_load.map)
             : std::make_unique<Map3DImpl>(std::make_shared<NpyArray>(), hiddenMapConfig(simulation));
-    auto output_map = std::make_unique<Map3DImpl>(std::make_shared<NpyArray>());
+    auto output_map = std::make_unique<Map3DImpl>(
+        std::make_shared<NpyArray>(), outputMapConfig(simulation, mission, *hidden_map));
 
     auto gps = std::make_unique<MockGPS>(
         simulation.initial_drone_position,
