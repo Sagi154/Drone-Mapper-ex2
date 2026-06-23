@@ -30,8 +30,8 @@ namespace {
 }
 
 [[nodiscard]] types::MissionConfigData minimalMission() {
-    // Keep max_steps tiny: factory smoke tests call run()->runMission() with the real stack.
-    return types::MissionConfigData{5, 10.0 * cm, 1.0};
+    // Factory layout tests only create runs; integration test uses one mission step max.
+    return types::MissionConfigData{1, 10.0 * cm, 1.0};
 }
 
 [[nodiscard]] types::DroneConfigData minimalDrone() {
@@ -72,7 +72,6 @@ TEST(SimulationRunFactory, CreateReturnsNonNullRun) {
         minimalSimulation(), minimalMission(), minimalDrone(), minimalLidar(), output_path);
 
     ASSERT_NE(run, nullptr);
-    EXPECT_NO_THROW(static_cast<void>(run->run()));
 
     std::error_code ec;
     std::filesystem::remove_all(output_path, ec);
@@ -111,6 +110,7 @@ TEST(SimulationRun, FactoryLoadsHiddenMapFromDisk) {
 
     const types::SimulationResult result = run->run();
     EXPECT_EQ(result.simulation_config.map_filename, goldenMapPath());
+    EXPECT_FALSE(result.mission_results.empty());
 
     const std::vector<std::string> lines = readAllLines(io::runErrorLog(output_path, 1));
     EXPECT_TRUE(lines.empty());
