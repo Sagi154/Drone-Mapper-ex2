@@ -37,4 +37,5 @@ add_drone_mapper_test_suite(drone_mapper_map_tests map
 
 add_drone_mapper_test_suite(drone_mapper_runtime_tests runtime
     components/test_mapping_algorithm.cpp
+    components/test_drone_control.cpp
 )
