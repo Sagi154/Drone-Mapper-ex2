@@ -333,6 +333,7 @@ The attached stub implementations are examples only. You should provide their ow
 - Scan-to-voxel conversion.
 - Mapping algorithm behavior.
 - Map comparison scoring (`MapsComparison::compare` — `SimulationRunImpl` calls it; scoring logic still stubbed).
-- Simulation output writing and error-log writing.
 
 **Implemented:** `SimulationRunImpl::run()` calls `IMissionControl::runMission()`, copies `output_map_config`, scores via `MapsComparison` on `Completed`/`MaxSteps`, returns `mission_score: -1` on startup errors or `MissionRunStatus::Error`, and sets `resolution_request_status` from `output_mapping_resolution_factor`.
+
+**Implemented:** `SimulationManager::run()` aggregates `SimulationManagerReport`, tracks `run_id` / `config_indices` during the cartesian product, and writes `simulation_output.yaml` via `src/io/SimulationOutputYamlWriter.cpp`.

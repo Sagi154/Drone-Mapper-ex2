@@ -24,6 +24,8 @@ add_library(drone_mapper
     src/SimulationRunFactoryImpl.cpp
     src/SimulationRunImpl.cpp
     src/io/RunErrorLog.cpp
+    src/io/TimeFormat.cpp
+    src/io/SimulationOutputYamlWriter.cpp
     src/io/PathResolver.cpp
     src/io/RunPathHelpers.cpp
     src/io/YamlParseUtil.cpp
