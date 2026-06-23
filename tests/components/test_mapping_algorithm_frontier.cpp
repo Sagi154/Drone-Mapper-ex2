@@ -33,12 +33,14 @@ namespace {
     types::MapConfig config{};
     config.resolution = 1.0 * cm;
     config.offset = Position3D{};
+    // Voxel indices 0..10 / 0..2 / 0..2 align with Map3DImpl offset-based indexing
+    // (ex1 used absolute cm coords y=-1..1 and z=49..51 on a sparse map).
     config.boundaries.min_x = 0.0 * x_extent[cm];
     config.boundaries.max_x = 10.0 * x_extent[cm];
-    config.boundaries.min_y = -1.0 * y_extent[cm];
-    config.boundaries.max_y = 1.0 * y_extent[cm];
-    config.boundaries.min_height = 49.0 * z_extent[cm];
-    config.boundaries.max_height = 51.0 * z_extent[cm];
+    config.boundaries.min_y = 0.0 * y_extent[cm];
+    config.boundaries.max_y = 2.0 * y_extent[cm];
+    config.boundaries.min_height = 0.0 * z_extent[cm];
+    config.boundaries.max_height = 2.0 * z_extent[cm];
     return config;
 }
 
@@ -140,11 +142,11 @@ TEST(MappingAlgorithmTest, FrontierStartNotPassableWhenCentreOccupied) {
 TEST(MappingAlgorithmTest, FrontierFindsPathAlongEmptyCorridor) {
     const types::MapConfig config = makeNarrowCorridorConfig();
     Map3DImpl map{makeUnmappedMap(NpyArray::shape_t{11, 3, 3}), config};
-    fillEmptyBox(map, 0, 2, -1, 1, 49, 51, config);
+    fillEmptyBox(map, 0, 2, 0, 2, 0, 2, config);
 
     const detail::MappingAlgorithmFrontier frontier;
     const detail::FrontierPathResult result =
-        frontier.findPath(map, pointCm(0, 0, 50), 0.0 * cm);
+        frontier.findPath(map, pointCm(0, 0, 1), 0.0 * cm);
 
     ASSERT_TRUE(result.found);
     ASSERT_EQ(result.path.size(), 2U);
@@ -195,11 +197,11 @@ TEST(MappingAlgorithmTest, FrontierHasNoUnmappedInSphereWhenFullyKnown) {
 TEST(MappingAlgorithmTest, FrontierFindExplorePathMovesTowardUnknown) {
     const types::MapConfig config = makeNarrowCorridorConfig();
     Map3DImpl map{makeUnmappedMap(NpyArray::shape_t{11, 3, 3}), config};
-    fillEmptyBox(map, 0, 8, -1, 1, 49, 51, config);
+    fillEmptyBox(map, 0, 8, 0, 2, 0, 2, config);
 
     const detail::MappingAlgorithmFrontier frontier;
     const detail::FrontierPathResult explore =
-        frontier.findExplorePath(map, pointCm(0, 0, 50), 0.0 * cm);
+        frontier.findExplorePath(map, pointCm(0, 0, 1), 0.0 * cm);
 
     ASSERT_TRUE(explore.found);
     ASSERT_FALSE(explore.path.empty());
@@ -211,11 +213,11 @@ TEST(MappingAlgorithmTest, FrontierFindExplorePathMovesTowardUnknown) {
 TEST(MappingAlgorithmTest, FrontierDiagnoseReportsConnectivityMetrics) {
     const types::MapConfig config = makeNarrowCorridorConfig();
     Map3DImpl map{makeUnmappedMap(NpyArray::shape_t{11, 3, 3}), config};
-    fillEmptyBox(map, 0, 8, -1, 1, 49, 51, config);
+    fillEmptyBox(map, 0, 8, 0, 2, 0, 2, config);
 
     const detail::MappingAlgorithmFrontier frontier;
     const detail::PlanningDiagnostics diag =
-        frontier.diagnose(map, pointCm(0, 0, 50), 0.0 * cm);
+        frontier.diagnose(map, pointCm(0, 0, 1), 0.0 * cm);
 
     EXPECT_TRUE(diag.start_passable);
     EXPECT_GT(diag.passable_reached, 0U);
