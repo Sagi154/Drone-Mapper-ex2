@@ -102,7 +102,11 @@ struct ProcessOutput {
 
     ProcessOutput output{};
     std::array<char, 256> buffer{};
+#ifdef _WIN32
     FILE* pipe = _popen(command.str().c_str(), "r");
+#else
+    FILE* pipe = popen(command.str().c_str(), "r");
+#endif
     if (pipe == nullptr) {
         return output;
     }
@@ -110,7 +114,11 @@ struct ProcessOutput {
     while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr) {
         output.stdout_text += buffer.data();
     }
+#ifdef _WIN32
     output.exit_code = _pclose(pipe);
+#else
+    output.exit_code = pclose(pipe);
+#endif
 
     const std::filesystem::path stderr_path = tempMapPath("maps_comparison_stderr.txt");
     if (std::filesystem::exists(stderr_path)) {
@@ -306,6 +314,7 @@ TEST(MapsComparison, GoldenMapRoundTripScores100) {
 #endif
 
     const types::MapConfig config = makeGoldenMapConfig();
+    auto origin_array = std::make_shared<NpyArray>();
     auto target_array = std::make_shared<NpyArray>();
     ASSERT_EQ(origin_array->LoadNPY(golden.string()), nullptr);
     ASSERT_EQ(target_array->LoadNPY(golden.string()), nullptr);
