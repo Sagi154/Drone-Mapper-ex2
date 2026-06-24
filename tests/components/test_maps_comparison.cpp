@@ -368,5 +368,4 @@ TEST(MapsComparison, CliWrongArgCountPrintsMinusOne) {
 }
 #endif
 
-} // namespace
 } // namespace drone_mapper
