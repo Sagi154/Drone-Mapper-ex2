@@ -42,6 +42,11 @@ add_drone_mapper_test_suite(drone_mapper_simulation_tests simulation
     components/test_simulation_manager.cpp
 )
 
+target_include_directories(drone_mapper_simulation_tests
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/support
+)
+
 add_drone_mapper_test_suite(drone_mapper_algorithm_tests algorithm
     components/test_mapping_algorithm.cpp
     components/test_mapping_algorithm_frontier.cpp
