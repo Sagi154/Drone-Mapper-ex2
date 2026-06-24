@@ -81,6 +81,11 @@ jobs:
           docker run --rm drone-mapper-ex2-ci:latest \
             ctest --test-dir build/ci -L mission --output-on-failure
 
+      - name: Run maps comparison tests
+        run: |
+          docker run --rm drone-mapper-ex2-ci:latest \
+            ctest --test-dir build/ci -L maps-comparison --output-on-failure
+
       - name: Upload CI logs on failure
         if: failure()
         uses: actions/upload-artifact@v4

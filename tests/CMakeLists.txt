@@ -59,3 +59,13 @@ add_drone_mapper_test_suite(drone_mapper_drone_tests drone
 add_drone_mapper_test_suite(drone_mapper_mission_tests mission
     components/test_mission_control.cpp
 )
+
+add_drone_mapper_test_suite(drone_mapper_maps_comparison_tests maps-comparison
+    components/test_maps_comparison.cpp
+)
+
+target_compile_definitions(drone_mapper_maps_comparison_tests
+    PRIVATE
+        MAPS_COMPARISON_EXE="$<TARGET_FILE:maps_comparison>"
+)
+add_dependencies(drone_mapper_maps_comparison_tests maps_comparison)
