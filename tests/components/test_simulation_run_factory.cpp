@@ -1,6 +1,8 @@
 #include <drone_mapper/SimulationRunFactoryImpl.h>
 #include <drone_mapper/io/RunPathHelpers.h>
 
+#include <ConfigFixtures.hpp>
+
 #include <gtest/gtest.h>
 
 #include <fstream>
@@ -11,22 +13,8 @@
 namespace drone_mapper {
 namespace {
 
-[[nodiscard]] std::filesystem::path goldenMapPath() {
-#ifdef DRONE_MAPPER_SOURCE_DIR
-    return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR} / "data_maps" / "single_voxel_x2_y4_z2.npy";
-#else
-    return std::filesystem::path{"data_maps/single_voxel_x2_y4_z2.npy"};
-#endif
-}
-
 [[nodiscard]] types::SimulationConfigData minimalSimulation() {
-    return types::SimulationConfigData{
-        goldenMapPath(),
-        10.0 * cm,
-        Position3D{},
-        Position3D{},
-        0.0 * horizontal_angle[deg],
-    };
+    return test_support::e2eSimulation();
 }
 
 [[nodiscard]] types::MissionConfigData minimalMission() {
@@ -109,8 +97,33 @@ TEST(SimulationRun, FactoryLoadsHiddenMapFromDisk) {
     ASSERT_NE(run, nullptr);
 
     const types::SimulationResult result = run->run();
-    EXPECT_EQ(result.simulation_config.map_filename, goldenMapPath());
+    EXPECT_EQ(result.simulation_config.map_filename, test_support::goldenMapPath());
     EXPECT_FALSE(result.mission_results.empty());
+
+    const std::vector<std::string> lines = readAllLines(io::runErrorLog(output_path, 1));
+    EXPECT_TRUE(lines.empty());
+
+    std::error_code ec;
+    std::filesystem::remove_all(output_path, ec);
+}
+
+TEST(SimulationRun, Factory_EndToEnd_WritesOutputMapAndScores) {
+    SimulationRunFactoryImpl factory;
+    const std::filesystem::path output_path =
+        std::filesystem::temp_directory_path() / "factory_e2e_smoke";
+
+    std::unique_ptr<ISimulationRun> run = factory.create(
+        minimalSimulation(), minimalMission(), minimalDrone(), minimalLidar(), output_path);
+    ASSERT_NE(run, nullptr);
+
+    const types::SimulationResult result = run->run();
+
+    const std::filesystem::path output_map = io::runOutputMap(output_path, 1);
+    EXPECT_TRUE(std::filesystem::exists(output_map));
+    EXPECT_GE(result.mission_score, 0.0);
+    ASSERT_EQ(result.mission_results.size(), 1U);
+    EXPECT_TRUE(result.mission_results.front().status == types::MissionRunStatus::Completed ||
+                result.mission_results.front().status == types::MissionRunStatus::MaxSteps);
 
     const std::vector<std::string> lines = readAllLines(io::runErrorLog(output_path, 1));
     EXPECT_TRUE(lines.empty());
