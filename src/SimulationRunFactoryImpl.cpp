@@ -13,6 +13,8 @@
 
 #include <TinyNPY.h>
 
+#include <algorithm>
+#include <cstdint>
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -41,6 +43,42 @@ namespace {
     const double hidden_cm = simulation.map_resolution.force_numerical_value_in(cm);
     config.resolution = (hidden_cm / factor) * cm;
     return config;
+}
+
+[[nodiscard]] std::size_t voxelAxisCount(PhysicalLength min_bound,
+                                         PhysicalLength max_bound,
+                                         PhysicalLength resolution) {
+    const double res_cm = resolution.force_numerical_value_in(cm);
+    if (res_cm <= 0.0) {
+        return 0;
+    }
+    const double span_cm = (max_bound - min_bound).force_numerical_value_in(cm);
+    if (span_cm < 0.0) {
+        return 0;
+    }
+    return static_cast<std::size_t>(std::lround(span_cm / res_cm)) + 1;
+}
+
+[[nodiscard]] std::shared_ptr<NpyArray> makeEmptyOutputArray(const types::MapConfig& config) {
+    const std::size_t nx =
+        voxelAxisCount(config.boundaries.min_x, config.boundaries.max_x, config.resolution);
+    const std::size_t ny =
+        voxelAxisCount(config.boundaries.min_y, config.boundaries.max_y, config.resolution);
+    const std::size_t nz = voxelAxisCount(config.boundaries.min_height,
+                                          config.boundaries.max_height,
+                                          config.resolution);
+    if (nx == 0 || ny == 0 || nz == 0) {
+        return std::make_shared<NpyArray>();
+    }
+
+    auto map = std::make_shared<NpyArray>(NpyArray::shape_t{nx, ny, nz},
+                                          sizeof(std::int8_t),
+                                          NpyArray::GetTypeChar(typeid(std::int8_t)));
+    map->Allocate();
+    std::fill_n(map->Data<std::int8_t>(),
+                map->NumValue(),
+                static_cast<std::int8_t>(types::VoxelOccupancy::Unmapped));
+    return map;
 }
 
 [[nodiscard]] std::filesystem::path resolveMapPath(const std::filesystem::path& map_filename) {
@@ -112,8 +150,9 @@ SimulationRunFactoryImpl::create(const types::SimulationConfigData& simulation,
         hidden_map_load.map
             ? std::move(hidden_map_load.map)
             : std::make_unique<Map3DImpl>(std::make_shared<NpyArray>(), hiddenMapConfig(simulation));
-    auto output_map = std::make_unique<Map3DImpl>(
-        std::make_shared<NpyArray>(), outputMapConfig(simulation, mission, *hidden_map));
+    const types::MapConfig output_config = outputMapConfig(simulation, mission, *hidden_map);
+    auto output_map =
+        std::make_unique<Map3DImpl>(makeEmptyOutputArray(output_config), output_config);
 
     auto gps = std::make_unique<MockGPS>(
         simulation.initial_drone_position,
