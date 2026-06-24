@@ -129,14 +129,14 @@ int main(int argc, char** argv) {
         }
     }
 
-    const std::optional<Map3DImpl> origin =
+    std::optional<Map3DImpl> origin =
         loadMapFromDisk(std::filesystem::path{argv[1]}, origin_config);
     if (!origin) {
         printErrorAndExit("Failed to load origin map: " + std::string{argv[1]});
         return 1;
     }
 
-    const std::optional<Map3DImpl> target =
+    std::optional<Map3DImpl> target =
         loadMapFromDisk(std::filesystem::path{argv[2]}, target_config);
     if (!target) {
         printErrorAndExit("Failed to load target map: " + std::string{argv[2]});
