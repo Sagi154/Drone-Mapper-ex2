@@ -3,6 +3,7 @@
 
 #include <drone_mapper/Map3DImpl.h>
 #include <drone_mapper/MapsComparison.h>
+#include <drone_mapper/Types.h>
 
 #include <TinyNPY.h>
 
@@ -14,8 +15,11 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace {
+
+using namespace drone_mapper;
 
 [[nodiscard]] std::optional<types::MapConfig> readMapConfigNode(const YAML::Node& node) {
     if (!node || !node.IsMap()) {
@@ -91,6 +95,8 @@ void printErrorAndExit(const std::string& message) {
 } // namespace
 
 int main(int argc, char** argv) {
+    using namespace drone_mapper;
+
     if (argc < 3 || argc > 4) {
         printErrorAndExit(
             "Usage: maps_comparison <origin_map> <target_map> [comparison_config=<path>]");
@@ -101,8 +107,7 @@ int main(int argc, char** argv) {
     types::MapConfig target_config = defaultSharedMapConfig();
 
     if (argc == 4) {
-        const std::optional<std::filesystem::path> config_path =
-            parseComparisonConfigArg(argv[3]);
+        const std::optional<std::filesystem::path> config_path = parseComparisonConfigArg(argv[3]);
         if (!config_path) {
             printErrorAndExit("Optional third argument must be comparison_config=<path>");
             return 1;
@@ -110,10 +115,12 @@ int main(int argc, char** argv) {
 
         try {
             const YAML::Node root = YAML::LoadFile(config_path->string());
-            if (const std::optional<types::MapConfig> parsed = readMapConfigNode(root["original_map"])) {
+            if (const std::optional<types::MapConfig> parsed =
+                    readMapConfigNode(root["original_map"])) {
                 origin_config = *parsed;
             }
-            if (const std::optional<types::MapConfig> parsed = readMapConfigNode(root["target_map"])) {
+            if (const std::optional<types::MapConfig> parsed =
+                    readMapConfigNode(root["target_map"])) {
                 target_config = *parsed;
             }
         } catch (const YAML::Exception& ex) {
@@ -136,8 +143,9 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    const std::vector<double> scores =
-        drone_mapper::MapsComparison::compare(*origin, {&(*target)});
+    Map3DImpl& origin_map = origin.value();
+    Map3DImpl& target_map = target.value();
+    const std::vector<double> scores = MapsComparison::compare(origin_map, {&target_map});
     if (scores.empty()) {
         printErrorAndExit("Comparison produced no scores.");
         return 1;
