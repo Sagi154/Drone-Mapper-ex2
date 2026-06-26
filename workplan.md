@@ -1,7 +1,7 @@
 # Assignment 2 — Work Plan
 
 **Deadline:** July 1, 2026, 23:30  
-**Team:** 2 people · **Repo state:** Phase 3 complete; Gate B verified on `main` (orchestration PRs #19–#22 merged, CI green)
+**Team:** 2 people · **Repo state:** Phase 3 complete; Phase 4 in progress (Gate C)
 
 ## Goal
 
@@ -179,19 +179,52 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 
 ## Phase 4 — Tests & compliance (Days 7–9)
 
-**Outcome:** All required GTest filters pass; HLD matches code.
+**Outcome:** All required GTest filters pass; HLD matches code; assignment test binary name works.
+
+Phase 3 left Person A with orchestration largely done and Person B with the mandatory runtime test gaps. Split Phase 4 by **component ownership**, not a 50/50 “both” bucket — shared items have explicit leads below.
+
+### Gaps on `main` (Gate C blockers)
+
+| Required filter | Owner domain | Status |
+|-----------------|--------------|--------|
+| `SimulationManager.*` | A | ✅ |
+| `SimulationRun.*` | A (+ B mocks in same file) | ✅ |
+| `MissionControl.*` | B | ✅ |
+| `DroneControl.*` | B | ✅ |
+| `MappingAlgorithm.*` | B | ✅ |
+| `MapsComparison.*` | B | ✅ |
+| `MockLidar.*` | B | ❌ `test_mock_lidar.cpp` stub; not in CMake |
+| `Integration.*` | B | ❌ `tests/integration/` missing |
+| `drone_mapper_simulation_test` target | A | ❌ CMake builds 7 separate executables; assignment expects one binary |
+
+### Person A (orchestration, I/O, test harness)
+
+| Task | Files / notes | Status |
+|------|---------------|--------|
+| `drone_mapper_simulation_test` umbrella target | Single executable (or alias) aggregating all component suites; register B's new sources as they land | Not started |
+| `readme.txt` — build, run, output formats | Align with `config_load_error`, startup vs mission `error.log`, corrupt `.npy`, invalid refs | Not started |
+| HLD — orchestration / I/O | `SimulationManager`, factory, `SimulationRunImpl`, CLI, error logging, YAML flow, missing-input handling | Not started |
+| Bug-isolation — A-owned suites | Break factory/manager/CLI/config; confirm B prefixes still pass | Not started |
+
+### Person B (runtime, integration, scan path)
+
+| Task | Files / notes | Status |
+|------|---------------|--------|
+| Integration test — real algorithm | `tests/integration/` · filter `Integration.*` | Not started |
+| Integration test — mock `IMappingAlgorithm` | GMock algorithm wired through factory/run | Not started |
+| `MockLidar` component tests | Implement `test_mock_lidar.cpp`; wire into umbrella target | Not started |
+| HLD — runtime / algorithm | Mission loop, `DroneControlImpl::step`, `MappingAlgorithmImpl`, `MapsComparison` | Not started |
+| Bug-isolation — B-owned suites | Break drone/mission/algorithm/comparison; confirm A prefixes still pass | Not started |
+
+### Together (after individual tasks land)
 
 | Task | Owner | Deliverable |
 |------|-------|-------------|
-| Integration test — real algorithm | B | `tests/integration/` · filter `Integration.*` |
-| Integration test — mock `IMappingAlgorithm` | B | GMock algorithm |
-| `MockLidar` component tests | B | `MockLidar.*` filter |
-| Bug-isolation review | Both | Unrelated suites don't fail when one component broken |
-| Update `docs/HLD.md` if wiring changed | Both | Class + sequence diagrams (e14/e15) |
-| `readme.txt` — build, run, output formats | A | Matches actual behavior |
 | Run `pre-submission-review` skill checklist | Both | All boxes checked |
+| Gate C verification | Both | All 8 filters + `Integration.*` green on `drone_mapper_simulation_test` |
+| ex1 anti-patterns review | Both | Walk `docs/ex1-mistakes.md` on owned code before submission |
 
-**Gate C:** `./drone_mapper_simulation_test` all green; all 8 component prefixes + `Integration.*` work; invalid config exits gracefully; missing files handled.
+**Gate C:** `./drone_mapper_simulation_test` all green; all 8 component prefixes + `Integration.*` work; invalid config exits gracefully; missing files handled (b06 on `main`).
 
 ---
 
@@ -227,7 +260,7 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 
 | Risk | Mitigation |
 |------|------------|
-| Late test harness | Create `tests/` + CMake in Phase 1, not Phase 4 |
+| Late test harness | Create `tests/` + CMake in Phase 1, not Phase 4 · **A:** umbrella `drone_mapper_simulation_test` in Phase 4 |
 | `.npy` bugs | Golden tests on `data_maps/` first |
 | Test timeout (b05s) | Algorithm is fine; risk is map size in tests — use small/synthetic maps; enforce ~10 s per test |
 | A blocked waiting on B's runtime | A starts factory stub + fixtures in Phase 2 overlap (see timeline) |
