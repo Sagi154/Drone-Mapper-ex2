@@ -3,11 +3,17 @@
 #include <drone_mapper/ISimulationRun.h>
 #include <drone_mapper/ISimulationRunFactory.h>
 #include <drone_mapper/SimulationManager.h>
+#include <drone_mapper/SimulationRunFactoryImpl.h>
+#include <drone_mapper/io/RunPathHelpers.h>
+#include <drone_mapper/io/YamlConfigParsers.h>
+
+#include <ConfigFixtures.hpp>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <yaml-cpp/yaml.h>
 
+#include <fstream>
 #include <filesystem>
 #include <memory>
 #include <string>
@@ -202,6 +208,43 @@ TEST(SimulationManagerTest, Run_EmitsConfigIndicesAndRunId) {
     const YAML::Node second_run = root["score_report"]["runs"][1];
     EXPECT_EQ(second_run["run_id"].as<int>(), 2);
     EXPECT_EQ(second_run["config_indices"]["simulation"].as<std::size_t>(), 1U);
+
+    removeDirectory(output_path);
+}
+
+TEST(SimulationManagerTest, RealFactory_EndToEnd_WritesOutputMapAndReport) {
+    test_support::CapturingErrorLog log;
+    const io::ConfigParseResult<types::SimulationCompositionData> composition_result =
+        test_support::loadE2eComposition(log);
+    ASSERT_TRUE(composition_result.ok);
+    EXPECT_TRUE(log.entries().empty());
+
+    const std::filesystem::path output_path =
+        std::filesystem::temp_directory_path() / "simulation_manager_e2e_smoke";
+    removeDirectory(output_path);
+
+    SimulationManager manager{std::make_unique<SimulationRunFactoryImpl>()};
+    const types::SimulationManagerReport report =
+        manager.run(composition_result.value, output_path);
+
+    ASSERT_EQ(report.runs.size(), 1U);
+    EXPECT_GE(report.runs.front().mission_score, 0.0);
+
+    const std::filesystem::path output_map = io::runOutputMap(output_path, 1);
+    EXPECT_TRUE(std::filesystem::exists(output_map));
+
+    const std::filesystem::path yaml_path = output_path / "simulation_output.yaml";
+    ASSERT_TRUE(std::filesystem::exists(yaml_path));
+
+    const YAML::Node root = YAML::LoadFile(yaml_path.string());
+    ASSERT_TRUE(root["score_report"]);
+    ASSERT_TRUE(root["score_report"]["runs"]);
+    ASSERT_EQ(root["score_report"]["runs"].size(), 1U);
+    EXPECT_GE(root["score_report"]["runs"][0]["mission_score"].as<double>(), 0.0);
+
+    std::ifstream error_log_stream(io::runErrorLog(output_path, 1));
+    std::string error_line;
+    EXPECT_FALSE(std::getline(error_log_stream, error_line));
 
     removeDirectory(output_path);
 }

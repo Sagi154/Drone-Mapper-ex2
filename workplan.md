@@ -1,7 +1,7 @@
 # Assignment 2 — Work Plan
 
 **Deadline:** July 1, 2026, 23:30  
-**Team:** 2 people · **Repo state:** course skeleton merged; all components are stubs except `MockLidar` and `ScanResultToVoxels`
+**Team:** 2 people · **Repo state:** Phase 2 complete (runtime + factory E2E); Phase 3 in progress — orchestration code largely on `main` from overlap, Gate B not verified
 
 ## Goal
 
@@ -54,13 +54,13 @@ Day:  0    1    2    3    4    5    6    7    8    9   10   11   12
 
 ## Handoffs (do not skip)
 
-| # | Trigger | From → To | Deliverable |
-|---|---------|-----------|-------------|
-| H1 | Phase 1 Gate A passes | A → B | `Map3DImpl` loads `data_maps/*.npy`; mission/drone YAML parses to typed configs |
-| H2 | `DroneControlImpl::step` compiles | B → A | B shares minimal call signature + deps list for factory wiring |
-| H3 | `MissionControlImpl::runMission` runs one mission | B → A | A plugs runtime into `SimulationRunImpl` / minimal `SimulationRunFactoryImpl` |
-| H4 | Gate A (full) passes | Both | One scenario completes end-to-end and writes output `.npy` |
-| H5 | Gate B passes | A → B | Full CLI path works; B adds `Integration.*` tests against real wiring |
+| # | Trigger | From → To | Deliverable | Status |
+|---|---------|-----------|-------------|--------|
+| H1 | Phase 1 Gate A passes | A → B | `Map3DImpl` loads `data_maps/*.npy`; mission/drone YAML parses to typed configs | ✅ Done |
+| H2 | `DroneControlImpl::step` compiles | B → A | B shares minimal call signature + deps list for factory wiring | ✅ Done |
+| H3 | `MissionControlImpl::runMission` runs one mission | B → A | A plugs runtime into `SimulationRunImpl` / minimal `SimulationRunFactoryImpl` | ✅ Done |
+| H4 | Gate A (full) passes | Both | One scenario completes end-to-end and writes output `.npy` | ✅ Done |
+| H5 | Gate B passes | A → B | Full CLI path works; B adds `Integration.*` tests against real wiring | Pending |
 
 **Pair session (~30 min) at H2:** walk through the DI graph in `docs/HLD.md` factory sequence so A's stub factory matches B's constructor needs.
 
@@ -100,12 +100,12 @@ Day:  0    1    2    3    4    5    6    7    8    9   10   11   12
 
 ---
 
-## Phase 2 — Runtime loop (Days 3–6)
+## Phase 2 — Runtime loop (Days 3–6) ✅ DONE
 
 **Outcome:** Single mission runs: step loop, scan, voxels, save map.  
 **Overlaps Phase 3 from Day 4** — A does not wait for all of Phase 2 to finish before starting orchestration stubs.
 
-### Person B (primary — runtime)
+### Person B (primary — runtime) ✅ DONE
 
 | Task | Files / notes |
 |------|---------------|
@@ -115,17 +115,16 @@ Day:  0    1    2    3    4    5    6    7    8    9   10   11   12
 | `MapsComparison` + `maps_comparison` exe | stdout score only · stderr on error |
 | Component tests | `DroneControl.*`, `MissionControl.*`, `MappingAlgorithm.*`, `MapsComparison.*` |
 
-### Person A (parallel — unblocks Phase 3)
+### Person A (parallel — unblocks Phase 3) ✅ DONE
 
 | Task | Files / notes |
 |------|---------------|
-| Minimal `SimulationRunFactoryImpl` — single-scenario wiring | Hard-code one tuple first · expand in Phase 3 |
-| `SimulationRunImpl` skeleton — call `runMission` when H3 lands | Score -1 placeholder until compare wired |
-| Test fixtures using parsed YAML + loaded `.npy` | Reuse A's parsers · no duplicate config loading in tests |
-| `output_results/` path layout draft | Document in `readme.txt` early |
+| Minimal `SimulationRunFactoryImpl` — single-scenario wiring | Hard-code one tuple first · expand in Phase 3 → **expanded to full DI on `main` (Phase 3 overlap)** |
+| `SimulationRunImpl` skeleton — call `runMission` when H3 lands | Score -1 placeholder until compare wired → **full `runMission` + `MapsComparison` on `main` (Phase 3 overlap)** |
+| Test fixtures using parsed YAML + loaded `.npy` | Reuse A's parsers · `tests/support/ConfigFixtures.hpp` + E2E tests (unmerged) |
+| `output_results/` path layout draft | Document in `readme.txt` early → **also covers Phase 3 `runOutputDir` / `error.log` spec** |
 
-**Gate A (full):** Minimal factory + B's runtime complete one mission on a tiny map and write output `.npy`.  
-*(Previously "manual factory wiring" — now explicitly **A + B**, not B alone.)*
+**Gate A (full):** ✅ PASS — factory + runtime complete one mission on a tiny map, write `output_map.npy`, and score via `MapsComparison` (factory + manager E2E tests).
 
 **Performance note:** The ex1 algorithm itself is not slow. Past b05 concerns were caused by the specific maps used in testing. That said, **tests must still complete within ~10 s** — use small/synthetic maps in unit and component tests, and verify no single test blocks the suite.
 
@@ -136,26 +135,42 @@ Day:  0    1    2    3    4    5    6    7    8    9   10   11   12
 **Outcome:** Full composition cartesian product; CLI; report files.  
 **Starts while Phase 2 runtime is still landing** — factory starts as single-scenario stub, then generalizes.
 
-### Person A (primary — orchestration)
+Phase 3 is **not complete** — **Gate B** is the exit criterion. Several Person A tasks were implemented early during the Phase 2 window (see below); treat them as head start, not closure.
 
-| Task | Files / notes |
-|------|---------------|
-| `SimulationRunFactoryImpl` — full DI graph per tuple | See `docs/HLD.md` factory sequence · generalize Day 3 stub |
-| `SimulationRunImpl` — mission + compare + `SimulationResult` | Score -1 on continuable errors |
-| `SimulationManager` — expand product, aggregate report | `simulation_output.yaml` structure |
-| `drone_mapper_simulation_main` — CLI path rules | Default `simulation.yaml`, relative/absolute paths |
-| `output_results/` maps + per-run error logs | Document in `readme.txt` |
-| Missing-input handling (b06) | Tests for missing yaml/map |
+### Already done during Phase 2 overlap
 
-### Person B (parallel — finish runtime + support wiring)
+Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 tasks:
 
-| Task | Files / notes |
-|------|---------------|
-| Finish remaining Phase 2 component tests | Close gaps before Gate B |
-| Help wire factory dependencies at H3 | Pair on constructor args / ownership |
-| Component tests for orchestration | `SimulationManager.*`, `SimulationRun.*` (+ GPS/movement in Run suite) |
+| Phase 3 task | What was done in Phase 2 | Where |
+|--------------|--------------------------|-------|
+| `SimulationRunFactoryImpl` — full DI graph | Started as minimal stub; grew to full wiring (hidden map load, mocks, algorithm, drone/mission control) | `main` |
+| `SimulationRunImpl` — mission + compare + `SimulationResult` | `run()` calls `runMission`, scores via `MapsComparison`, `-1` on errors | `main` |
+| `SimulationManager` — cartesian product + report | Loop + `simulation_output.yaml` writer | `main` |
+| `drone_mapper_simulation_main` — CLI | `parseSimulationCliArgs`, `parseCompositionFile`, stderr on startup failure | `main` |
+| `output_results/` layout + path helpers | `runOutputDir` / `runOutputMap` / `runErrorLog` in `readme.txt` + `src/io/` | `main` |
+| Test fixtures (parsed YAML + `.npy`) | `ConfigFixtures.hpp`, `composition_e2e.yaml`, factory + manager E2E tests | unmerged |
+| Factory output-map allocation | `makeEmptyOutputArray` — output map must be allocatable before save | unmerged |
+| Person B — H3 factory wiring | `MissionControlImpl::runMission` + factory output-map config fix | `main` |
+| Person B — orchestration component tests | `SimulationManager.*` (GMock), `SimulationRun.*` (GPS/movement + mock `run`) | `main` |
+| Person B — real-wiring E2E test | `SimulationRun.Factory_EndToEnd_*`, `SimulationManagerTest.RealFactory_*` | unmerged |
 
-**Gate B:** Run `./drone_mapper_simulation` with a small composition YAML; get `simulation_output.yaml` + `output_results/`; failed scenario gets -1 and run continues.
+### Person A (primary — orchestration) — remaining
+
+| Task | Files / notes | Status |
+|------|---------------|--------|
+| Merge factory output-map fix + E2E tests | `SimulationRunFactoryImpl.cpp`, `test_simulation_run_factory.cpp`, `test_simulation_manager.cpp` | Unmerged |
+| Missing-input handling (b06) | Missing `simulation.yaml`, bad map path at group scope, invalid composition refs | Partial — startup + per-run map tests exist |
+| Runtime mission errors → `error.log` | Mirror `mission_results[].errors` in per-run log (factory only logs startup errors today) | Not started |
+| Gate B verification | Manual CLI smoke: composition YAML → `simulation_output.yaml` + `output_results/` | Not verified |
+
+### Person B (parallel — finish runtime + support wiring) — remaining
+
+| Task | Files / notes | Status |
+|------|---------------|--------|
+| Gate B support | Verify CLI path after A merges output-map fix; help debug scenario `-1` / timeouts | Pending |
+| `Integration.*` tests | Real algorithm + mock algorithm (`tests/integration/`) | Not started (Phase 4 scope, but listed at H5) |
+
+**Gate B:** Run `./drone_mapper_simulation` with a small composition YAML; get `simulation_output.yaml` + `output_results/`; failed scenario gets -1 and run continues. **Not verified yet.**
 
 ---
 
@@ -196,13 +211,13 @@ Day:  0    1    2    3    4    5    6    7    8    9   10   11   12
 
 ## Definition of done
 
-- [ ] Exact component names; frozen interfaces unchanged
+- [x] Exact component names; frozen interfaces unchanged
 - [ ] `drone_mapper_simulation` CLI behavior per assignment
 - [ ] `drone_mapper_simulation_test` with all required `--gtest_filter` prefixes
-- [ ] `simulation_output.yaml` + `output_results/` documented in `readme.txt`
+- [x] `simulation_output.yaml` + `output_results/` documented in `readme.txt`
 - [ ] Immediate error logging; score -1 on failed continuable scenarios
 - [ ] No ex1 anti-patterns (`docs/ex1-mistakes.md`)
-- [ ] Small maps finish in reasonable time
+- [x] Small maps finish in reasonable time
 - [ ] `docs/HLD.md` (and PDF) match implementation
 
 ## Risks
