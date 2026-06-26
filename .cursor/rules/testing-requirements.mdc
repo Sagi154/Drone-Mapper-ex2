@@ -9,7 +9,7 @@ alwaysApply: false
 ## Layout
 
 - Component: `tests/components/` — one suite per required component
-- Integration: `tests/integration/` — min 2 (real algorithm + mock algorithm)
+- Integration: `tests/integration/` — min 2 (real algorithm + mock algorithm); instructors provide config and map files for grading scenarios
 
 ## Required GTest filters
 
@@ -25,9 +25,29 @@ Must also cover `MockGPS` and `MockMovement`.
 
 ## Bug injection grading
 
-- Unrelated component tests must **not** fail when another component is buggy.
-- Target component tests should catch ≥60% of injected bugs.
-- Integration tests should catch ≥20%.
+Per `context/Exercise 2 Review Guideline.docx`:
+
+- Catching **>50%** of injected bugs in a component = full marks; **>25%** = partial marks.
+- Unrelated component tests should **not** fail when another component is buggy — isolate where possible.
+- Some destructive bugs may legitimately fail more than one component suite; still encapsulate tests per component when possible.
+- Integration tests should also catch some injected bugs (instructor-provided scenarios).
+
+## MockLidar tests
+
+Skeleton ships `MockLidar` — do **not** reimplement it; **do** write `MockLidar.*` tests.
+
+Example injected bug: rays travel only 2/3 of `z_max`. Cover obstacles at the **far end** of the beam and other boundary ray behaviors.
+
+## Integration test timing
+
+Integration scenarios (including instructor-provided config/map files) must finish within **1 minute** — both with and without injected bugs.
+
+## Integration map (benchmark)
+
+`data_maps/benchmark_map.npy` (ClassicCube-2, `29×30×31`) is the instructor-provided integration scenario map. Integration tests that run the full simulation end-to-end **should use this map** (or a compatible config) and assert the achieved score is close to 100.
+
+- Config fixture: `tests/data/configs/sim_benchmark.yaml`
+- Path helper: `test_support::benchmarkMapPath()` in `tests/support/ConfigFixtures.hpp`
 
 ## Coverage
 
