@@ -1,7 +1,7 @@
 # Assignment 2 — Work Plan
 
 **Deadline:** July 1, 2026, 23:30  
-**Team:** 2 people · **Repo state:** Phase 3 in progress — CLI smoke verified (PR #20); mission error logging done on `runtime-errors-to-error-log`; b06 gaps remain
+**Team:** 2 people · **Repo state:** Phase 3 Person A orchestration largely complete; b06 missing-input handling on `missing-input-error-handling` branch
 
 ## Goal
 
@@ -159,7 +159,7 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 | Task | Files / notes | Status |
 |------|---------------|--------|
 | Merge factory output-map fix + E2E tests | `SimulationRunFactoryImpl.cpp`, `test_simulation_run_factory.cpp`, `test_simulation_manager.cpp` | Done |
-| Missing-input handling (b06) | Missing `simulation.yaml`, bad map path at group scope, invalid composition refs | Partial — startup + per-run map tests exist |
+| Missing-input handling (b06) | Missing `simulation.yaml`, bad map path, corrupt `.npy`, invalid composition refs | Done — `missing-input-error-handling` branch |
 | Runtime mission errors → `error.log` | Mirror `mission_results[].errors` in per-run log via `SimulationRunImpl` | Done — `runtime-errors-to-error-log` branch |
 | Gate B verification | Manual CLI smoke: composition YAML → `simulation_output.yaml` + `output_results/` | Done |
 
