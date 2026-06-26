@@ -1,0 +1,9 @@
+simulation_compositions:
+  simulations:
+    - simulation_config: "sim_tiny.yaml"
+      mission_configs:
+        - "mission_smoke.yaml"
+  drone_configs:
+    - "missing_drone.yaml"
+  lidar_configs:
+    - "lidar_a.yaml"

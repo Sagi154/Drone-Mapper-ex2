@@ -3,27 +3,29 @@
 #include <drone_mapper/Units.h>
 
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <vector>
 
 namespace drone_mapper::types {
+
+struct ErrorRef {
+    std::string code{};
+    std::string message{};
+};
 
 // Changed: boundaries were removed because map bounds now live on MapConfig/IMap3D.
 struct MissionConfigData {
     std::size_t max_steps = 0;
     PhysicalLength gps_resolution{};
     double output_mapping_resolution_factor = 0;
+    std::optional<ErrorRef> config_load_error{};
 };
 
 enum class MissionRunStatus {
     Completed,
     MaxSteps,
     Error,
-};
-
-struct ErrorRef {
-    std::string code{};
-    std::string message{};
 };
 
 struct MissionRunResult {

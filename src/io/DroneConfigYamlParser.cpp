@@ -11,6 +11,8 @@ types::DroneConfigData parseDroneConfig(const std::filesystem::path& path, IRunE
 
     const auto root = detail::loadYamlFile(path, log, "[drone_config]");
     if (!root.has_value()) {
+        config.config_load_error =
+            types::ErrorRef{"CONFIG_FILE_NOT_FOUND", path.string()};
         return config;
     }
 

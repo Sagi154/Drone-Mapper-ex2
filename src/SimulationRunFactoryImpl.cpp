@@ -103,6 +103,25 @@ struct HiddenMapLoadResult {
     std::optional<types::ErrorRef> error;
 };
 
+void appendConfigLoadErrors(const types::SimulationConfigData& simulation,
+                            const types::MissionConfigData& mission,
+                            const types::DroneConfigData& drone,
+                            const types::LidarConfigData& lidar,
+                            std::vector<types::ErrorRef>& startup_errors) {
+    if (simulation.config_load_error) {
+        startup_errors.push_back(*simulation.config_load_error);
+    }
+    if (mission.config_load_error) {
+        startup_errors.push_back(*mission.config_load_error);
+    }
+    if (drone.config_load_error) {
+        startup_errors.push_back(*drone.config_load_error);
+    }
+    if (lidar.config_load_error) {
+        startup_errors.push_back(*lidar.config_load_error);
+    }
+}
+
 [[nodiscard]] HiddenMapLoadResult loadHiddenMap(const types::SimulationConfigData& simulation) {
     const std::filesystem::path map_path = resolveMapPath(simulation.map_filename);
     auto map_array = std::make_shared<NpyArray>();
@@ -140,10 +159,23 @@ SimulationRunFactoryImpl::create(const types::SimulationConfigData& simulation,
     io::RunErrorLog error_log{error_log_file};
 
     std::vector<types::ErrorRef> startup_errors;
-    HiddenMapLoadResult hidden_map_load = loadHiddenMap(simulation);
-    if (hidden_map_load.error) {
-        error_log.log(*hidden_map_load.error);
-        startup_errors.push_back(*hidden_map_load.error);
+    appendConfigLoadErrors(simulation, mission, drone, lidar, startup_errors);
+    for (const types::ErrorRef& error : startup_errors) {
+        error_log.log(error);
+    }
+
+    HiddenMapLoadResult hidden_map_load;
+    if (!simulation.config_load_error) {
+        hidden_map_load = loadHiddenMap(simulation);
+        if (hidden_map_load.error) {
+            error_log.log(*hidden_map_load.error);
+            startup_errors.push_back(*hidden_map_load.error);
+        }
+    } else {
+        hidden_map_load = {
+            std::make_unique<Map3DImpl>(std::make_shared<NpyArray>(), hiddenMapConfig(simulation)),
+            std::nullopt,
+        };
     }
 
     std::unique_ptr<Map3DImpl> hidden_map =

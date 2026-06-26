@@ -1,6 +1,7 @@
 #pragma once
 
 #include <drone_mapper/Units.h>
+#include <drone_mapper/types/MissionTypes.h>
 
 #include <cstddef>
 #include <optional>
@@ -14,6 +15,7 @@ struct DroneConfigData {
     HorizontalAngle max_rotate{};
     PhysicalLength max_advance{};
     PhysicalLength max_elevate{};
+    std::optional<ErrorRef> config_load_error{};
 };
 
 enum class RotationDirection {

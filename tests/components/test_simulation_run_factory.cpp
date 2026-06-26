@@ -160,4 +160,59 @@ TEST(SimulationRun, FactoryLogsErrorWhenMapFileMissing) {
     std::filesystem::remove_all(output_path, ec);
 }
 
+TEST(SimulationRun, Factory_BadNpy_ScoreMinusOne) {
+    SimulationRunFactoryImpl factory;
+    const std::filesystem::path output_path =
+        std::filesystem::temp_directory_path() / "factory_corrupt_npy";
+
+    types::SimulationConfigData simulation = minimalSimulation();
+    simulation.map_filename = test_support::corruptMapPath();
+
+    std::unique_ptr<ISimulationRun> run =
+        factory.create(simulation, minimalMission(), minimalDrone(), minimalLidar(), output_path);
+    ASSERT_NE(run, nullptr);
+
+    const types::SimulationResult result = run->run();
+    EXPECT_DOUBLE_EQ(result.mission_score, -1.0);
+    ASSERT_EQ(result.mission_results.size(), 1U);
+    EXPECT_EQ(result.mission_results.front().status, types::MissionRunStatus::Error);
+    ASSERT_EQ(result.mission_results.front().errors.size(), 1U);
+    EXPECT_EQ(result.mission_results.front().errors.front().code, "MAP_FILE_NOT_FOUND");
+
+    const std::vector<std::string> lines = readAllLines(io::runErrorLog(output_path, 1));
+    ASSERT_EQ(lines.size(), 1U);
+    EXPECT_NE(lines.front().find("MAP_FILE_NOT_FOUND"), std::string::npos);
+    EXPECT_NE(lines.front().find("corrupt_map.npy"), std::string::npos);
+
+    std::error_code ec;
+    std::filesystem::remove_all(output_path, ec);
+}
+
+TEST(SimulationRun, Factory_InvalidDroneConfig_ScoreMinusOne) {
+    SimulationRunFactoryImpl factory;
+    const std::filesystem::path output_path =
+        std::filesystem::temp_directory_path() / "factory_invalid_drone_config";
+
+    types::DroneConfigData drone = minimalDrone();
+    drone.config_load_error =
+        types::ErrorRef{"CONFIG_FILE_NOT_FOUND", "missing_drone.yaml"};
+
+    std::unique_ptr<ISimulationRun> run =
+        factory.create(minimalSimulation(), minimalMission(), drone, minimalLidar(), output_path);
+    ASSERT_NE(run, nullptr);
+
+    const types::SimulationResult result = run->run();
+    EXPECT_DOUBLE_EQ(result.mission_score, -1.0);
+    ASSERT_EQ(result.mission_results.front().errors.size(), 1U);
+    EXPECT_EQ(result.mission_results.front().errors.front().code, "CONFIG_FILE_NOT_FOUND");
+
+    const std::vector<std::string> lines = readAllLines(io::runErrorLog(output_path, 1));
+    ASSERT_EQ(lines.size(), 1U);
+    EXPECT_NE(lines.front().find("CONFIG_FILE_NOT_FOUND"), std::string::npos);
+    EXPECT_NE(lines.front().find("missing_drone.yaml"), std::string::npos);
+
+    std::error_code ec;
+    std::filesystem::remove_all(output_path, ec);
+}
+
 } // namespace drone_mapper

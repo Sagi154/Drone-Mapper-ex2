@@ -6,6 +6,7 @@
 #include <drone_mapper/types/MissionTypes.h>
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -19,6 +20,7 @@ struct SimulationConfigData {
     Position3D map_offset{}; // moving the (0,0,0) of the npy matrix to this point
     Position3D initial_drone_position{};
     HorizontalAngle initial_angle{};
+    std::optional<ErrorRef> config_load_error{};
 };
 
 struct SimulationCompositionData {
