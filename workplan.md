@@ -181,7 +181,7 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 
 **Outcome:** All required GTest filters pass; HLD matches code; assignment test binary name works.
 
-Phase 3 left Person A with orchestration largely done and Person B with the mandatory runtime test gaps. Split Phase 4 by **component ownership**, not a 50/50 “both” bucket — shared items have explicit leads below.
+Phase 3 left Person A with orchestration largely done and Person B with the mandatory `Integration.*` gaps. Split Phase 4 by **component ownership**, not a 50/50 “both” bucket — shared items have explicit leads below.
 
 ### Gaps on `main` (Gate C blockers)
 
@@ -193,7 +193,7 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 | `DroneControl.*` | B | ✅ |
 | `MappingAlgorithm.*` | B | ✅ |
 | `MapsComparison.*` | B | ✅ |
-| `MockLidar.*` | B | ❌ `test_mock_lidar.cpp` stub; not in CMake |
+| `MockLidar.*` | A | ❌ `test_mock_lidar.cpp` stub; not in CMake |
 | `Integration.*` | B | ❌ `tests/integration/` missing |
 | `drone_mapper_simulation_test` target | A | ❌ CMake builds 7 separate executables; assignment expects one binary |
 
@@ -201,18 +201,18 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 
 | Task | Files / notes | Status |
 |------|---------------|--------|
-| `drone_mapper_simulation_test` umbrella target | Single executable (or alias) aggregating all component suites; register B's new sources as they land | Not started |
+| `drone_mapper_simulation_test` umbrella target | Single executable (or alias) aggregating all component suites; register integration sources as B lands them | Not started |
+| `MockLidar` component tests | Implement `test_mock_lidar.cpp`; wire into umbrella target · filter `MockLidar.*` | Not started |
 | `readme.txt` — build, run, output formats | Align with `config_load_error`, startup vs mission `error.log`, corrupt `.npy`, invalid refs | Not started |
 | HLD — orchestration / I/O | `SimulationManager`, factory, `SimulationRunImpl`, CLI, error logging, YAML flow, missing-input handling | Not started |
-| Bug-isolation — A-owned suites | Break factory/manager/CLI/config; confirm B prefixes still pass | Not started |
+| Bug-isolation — A-owned suites | Break factory/manager/CLI/config/MockLidar; confirm B prefixes still pass | Not started |
 
-### Person B (runtime, integration, scan path)
+### Person B (runtime, integration)
 
 | Task | Files / notes | Status |
 |------|---------------|--------|
 | Integration test — real algorithm | `tests/integration/` · filter `Integration.*` | Not started |
 | Integration test — mock `IMappingAlgorithm` | GMock algorithm wired through factory/run | Not started |
-| `MockLidar` component tests | Implement `test_mock_lidar.cpp`; wire into umbrella target | Not started |
 | HLD — runtime / algorithm | Mission loop, `DroneControlImpl::step`, `MappingAlgorithmImpl`, `MapsComparison` | Not started |
 | Bug-isolation — B-owned suites | Break drone/mission/algorithm/comparison; confirm A prefixes still pass | Not started |
 
