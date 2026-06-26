@@ -64,4 +64,9 @@ private:
     return result;
 }
 
+[[nodiscard]] inline io::ConfigParseResult<types::SimulationCompositionData> loadContinueAfterFailureComposition(
+    io::IRunErrorLog& log) {
+    return io::parseCompositionFile(configFixturePath("composition_continue_after_failure.yaml"), log);
+}
+
 } // namespace drone_mapper::test_support

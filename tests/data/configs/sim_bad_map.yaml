@@ -1,0 +1,12 @@
+simulation_config:
+  map_filename: "../../../data_maps/does_not_exist.npy"
+  map_resolution_cm: 10
+  initial_drone_position:
+    x_cm: 20
+    y_cm: 40
+    height_cm: 20
+  initial_angle_deg: 0
+  map_offset:
+    x_offset: 0
+    y_offset: 0
+    height_offset: 0
