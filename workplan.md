@@ -1,7 +1,7 @@
 # Assignment 2 — Work Plan
 
 **Deadline:** July 1, 2026, 23:30  
-**Team:** 2 people · **Repo state:** Phase 3 Person A orchestration largely complete; b06 missing-input handling on `missing-input-error-handling` branch
+**Team:** 2 people · **Repo state:** Phase 3 complete; Gate B verified on `main` (orchestration PRs #19–#22 merged, CI green)
 
 ## Goal
 
@@ -130,12 +130,12 @@ Day:  0    1    2    3    4    5    6    7    8    9   10   11   12
 
 ---
 
-## Phase 3 — Orchestration (Days 4–8)
+## Phase 3 — Orchestration (Days 4–8) ✅ DONE
 
 **Outcome:** Full composition cartesian product; CLI; report files.  
 **Starts while Phase 2 runtime is still landing** — factory starts as single-scenario stub, then generalizes.
 
-Phase 3 is **not complete** — **Gate B** is the exit criterion. Several Person A tasks were implemented early during the Phase 2 window (see below); treat them as head start, not closure.
+**Gate B verified on `main`** — happy path, bad-map `-1`, continue-after-failure, and mid-mission `error.log` mirroring all pass in CI and manual smoke.
 
 ### Already done during Phase 2 overlap
 
@@ -154,21 +154,24 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 | Person B — orchestration component tests | `SimulationManager.*` (GMock), `SimulationRun.*` (GPS/movement + mock `run`) | `main` |
 | Person B — real-wiring E2E test | `SimulationRun.Factory_EndToEnd_*`, `SimulationManagerTest.RealFactory_*` | `main` |
 
-### Person A (primary — orchestration) — remaining
+### Person A (primary — orchestration) ✅ DONE
 
 | Task | Files / notes | Status |
 |------|---------------|--------|
 | Merge factory output-map fix + E2E tests | `SimulationRunFactoryImpl.cpp`, `test_simulation_run_factory.cpp`, `test_simulation_manager.cpp` | Done |
-| Missing-input handling (b06) | Missing `simulation.yaml`, bad map path, corrupt `.npy`, invalid composition refs | Done — `missing-input-error-handling` branch |
-| Runtime mission errors → `error.log` | Mirror `mission_results[].errors` in per-run log via `SimulationRunImpl` | Done — `runtime-errors-to-error-log` branch |
+| Missing-input handling (b06) | Missing `simulation.yaml`, bad map path, corrupt `.npy`, invalid composition refs | Done — PR #22 |
+| Runtime mission errors → `error.log` | Mirror `mission_results[].errors` in per-run log via `SimulationRunImpl` | Done — PR #21 |
 | Gate B verification | Manual CLI smoke: composition YAML → `simulation_output.yaml` + `output_results/` | Done |
 
-### Person B (parallel — finish runtime + support wiring) — remaining
+### Person B (parallel — finish runtime + support wiring) ✅ DONE
 
 | Task | Files / notes | Status |
 |------|---------------|--------|
-| Gate B support | Verify CLI path after A merges output-map fix; help debug scenario `-1` / timeouts | Ready — B can start `Integration.*` |
-| `Integration.*` tests | Real algorithm + mock algorithm (`tests/integration/`) | Not started (Phase 4 scope, but listed at H5) |
+| H3 factory wiring | Runtime plugged into `SimulationRunFactoryImpl` / `SimulationRunImpl` | Done |
+| Orchestration component tests | `SimulationManager.*`, `SimulationRun.*` (mocks + real wiring) | Done |
+| Real-wiring E2E tests | `SimulationRun.Factory_EndToEnd_*`, `SimulationManagerTest.RealFactory_*` | Done |
+| Gate B support / verification | CLI path verified on `main`; scenario `-1` / continue-after-failure / `error.log` | Done |
+| `Integration.*` tests | Real algorithm + mock algorithm (`tests/integration/`) | Not started — Phase 4 (H5 handoff) |
 
 **Gate B:** Run `./drone_mapper_simulation` with a small composition YAML; get `simulation_output.yaml` + `output_results/`; failed scenario gets -1 and run continues. **Verified** — see `tests/data/configs/composition_continue_after_failure.yaml` and `SimulationManagerTest.RealFactory_ContinuesAfterStartupFailure`.
 
