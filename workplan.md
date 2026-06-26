@@ -1,7 +1,7 @@
 # Assignment 2 — Work Plan
 
 **Deadline:** July 1, 2026, 23:30  
-**Team:** 2 people · **Repo state:** Phase 2 complete; Phase 3 in progress — Gate B verified, error-log mirroring + b06 gaps remain
+**Team:** 2 people · **Repo state:** Phase 3 in progress — CLI smoke verified (PR #20); mission error logging done on `runtime-errors-to-error-log`; b06 gaps remain
 
 ## Goal
 
@@ -160,7 +160,7 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 |------|---------------|--------|
 | Merge factory output-map fix + E2E tests | `SimulationRunFactoryImpl.cpp`, `test_simulation_run_factory.cpp`, `test_simulation_manager.cpp` | Done |
 | Missing-input handling (b06) | Missing `simulation.yaml`, bad map path at group scope, invalid composition refs | Partial — startup + per-run map tests exist |
-| Runtime mission errors → `error.log` | Mirror `mission_results[].errors` in per-run log (factory only logs startup errors today) | Not started |
+| Runtime mission errors → `error.log` | Mirror `mission_results[].errors` in per-run log via `SimulationRunImpl` | Done — `runtime-errors-to-error-log` branch |
 | Gate B verification | Manual CLI smoke: composition YAML → `simulation_output.yaml` + `output_results/` | Done |
 
 ### Person B (parallel — finish runtime + support wiring) — remaining
@@ -215,7 +215,7 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 - [x] `drone_mapper_simulation` CLI behavior per assignment
 - [ ] `drone_mapper_simulation_test` with all required `--gtest_filter` prefixes
 - [x] `simulation_output.yaml` + `output_results/` documented in `readme.txt`
-- [ ] Immediate error logging; score -1 on failed continuable scenarios
+- [x] Immediate error logging; score -1 on failed continuable scenarios
 - [ ] No ex1 anti-patterns (`docs/ex1-mistakes.md`)
 - [x] Small maps finish in reasonable time
 - [ ] `docs/HLD.md` (and PDF) match implementation

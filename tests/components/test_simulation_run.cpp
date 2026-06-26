@@ -18,7 +18,10 @@
 
 #include <cmath>
 #include <filesystem>
+#include <fstream>
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace drone_mapper {
 namespace {
@@ -123,6 +126,16 @@ void setClearMap(NiceMapMock& map) {
     ON_CALL(map, isInBounds(testing::_)).WillByDefault(testing::Return(true));
     ON_CALL(map, atVoxel(testing::_))
         .WillByDefault(testing::Return(types::VoxelOccupancy::Empty));
+}
+
+[[nodiscard]] std::vector<std::string> readAllLines(const std::filesystem::path& path) {
+    std::ifstream input(path);
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(input, line)) {
+        lines.push_back(line);
+    }
+    return lines;
 }
 
 [[nodiscard]] std::unique_ptr<SimulationRunImpl> makeSimulationRun(
@@ -806,6 +819,43 @@ TEST(SimulationRunTest, Run_MissionError_ReturnsScoreMinusOne) {
     EXPECT_EQ(result.mission_results.front().status, types::MissionRunStatus::Error);
     ASSERT_EQ(result.mission_results.front().errors.size(), 1U);
     EXPECT_EQ(result.mission_results.front().errors.front().code, "DRONE_HITS_OBSTACLE");
+}
+
+TEST(SimulationRunTest, Run_MissionErrors_WrittenToErrorLog) {
+    const std::filesystem::path output_path =
+        std::filesystem::temp_directory_path() / "simulation_run_mission_error_log";
+    std::error_code ec;
+    std::filesystem::remove_all(output_path, ec);
+    std::filesystem::create_directories(output_path / "output_results" / "run_0001");
+
+    const std::filesystem::path output_map_file =
+        output_path / "output_results" / "run_0001" / "output_map.npy";
+    const std::filesystem::path error_log_file =
+        output_path / "output_results" / "run_0001" / "error.log";
+
+    auto mission_control = std::make_unique<MissionControlMock>();
+    EXPECT_CALL(*mission_control, runMission())
+        .WillOnce(testing::Return(types::MissionRunResult{
+            types::MissionRunStatus::Error,
+            3,
+            {types::ErrorRef{"DRONE_HITS_OBSTACLE", "collision at step 3"}},
+        }));
+
+    auto run = makeSimulationRun(
+        std::move(mission_control),
+        output_map_file,
+        makeDefaultSimulationConfig(),
+        makeDefaultMissionConfig());
+
+    const types::SimulationResult result = run->run();
+    EXPECT_DOUBLE_EQ(result.mission_score, -1.0);
+
+    const std::vector<std::string> lines = readAllLines(error_log_file);
+    ASSERT_EQ(lines.size(), 1U);
+    EXPECT_NE(lines.front().find("DRONE_HITS_OBSTACLE"), std::string::npos);
+    EXPECT_NE(lines.front().find("collision at step 3"), std::string::npos);
+
+    std::filesystem::remove_all(output_path, ec);
 }
 
 TEST(SimulationRunTest, Run_PopulatesOutputMapFileAndConfigs) {
