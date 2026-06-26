@@ -1,7 +1,7 @@
 # Assignment 2 — Work Plan
 
 **Deadline:** July 1, 2026, 23:30  
-**Team:** 2 people · **Repo state:** Phase 2 complete (runtime + factory E2E); Phase 3 in progress — orchestration code largely on `main` from overlap, Gate B not verified
+**Team:** 2 people · **Repo state:** Phase 2 complete; Phase 3 in progress — Gate B verified, error-log mirroring + b06 gaps remain
 
 ## Goal
 
@@ -60,7 +60,7 @@ Day:  0    1    2    3    4    5    6    7    8    9   10   11   12
 | H2 | `DroneControlImpl::step` compiles | B → A | B shares minimal call signature + deps list for factory wiring | ✅ Done |
 | H3 | `MissionControlImpl::runMission` runs one mission | B → A | A plugs runtime into `SimulationRunImpl` / minimal `SimulationRunFactoryImpl` | ✅ Done |
 | H4 | Gate A (full) passes | Both | One scenario completes end-to-end and writes output `.npy` | ✅ Done |
-| H5 | Gate B passes | A → B | Full CLI path works; B adds `Integration.*` tests against real wiring | Pending |
+| H5 | Gate B passes | A → B | Full CLI path works; B adds `Integration.*` tests against real wiring | ✅ Done |
 
 **Pair session (~30 min) at H2:** walk through the DI graph in `docs/HLD.md` factory sequence so A's stub factory matches B's constructor needs.
 
@@ -148,29 +148,29 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 | `SimulationManager` — cartesian product + report | Loop + `simulation_output.yaml` writer | `main` |
 | `drone_mapper_simulation_main` — CLI | `parseSimulationCliArgs`, `parseCompositionFile`, stderr on startup failure | `main` |
 | `output_results/` layout + path helpers | `runOutputDir` / `runOutputMap` / `runErrorLog` in `readme.txt` + `src/io/` | `main` |
-| Test fixtures (parsed YAML + `.npy`) | `ConfigFixtures.hpp`, `composition_e2e.yaml`, factory + manager E2E tests | unmerged |
-| Factory output-map allocation | `makeEmptyOutputArray` — output map must be allocatable before save | unmerged |
+| Test fixtures (parsed YAML + `.npy`) | `ConfigFixtures.hpp`, `composition_e2e.yaml`, factory + manager E2E tests | `main` |
+| Factory output-map allocation | `makeEmptyOutputArray` — output map must be allocatable before save | `main` |
 | Person B — H3 factory wiring | `MissionControlImpl::runMission` + factory output-map config fix | `main` |
 | Person B — orchestration component tests | `SimulationManager.*` (GMock), `SimulationRun.*` (GPS/movement + mock `run`) | `main` |
-| Person B — real-wiring E2E test | `SimulationRun.Factory_EndToEnd_*`, `SimulationManagerTest.RealFactory_*` | unmerged |
+| Person B — real-wiring E2E test | `SimulationRun.Factory_EndToEnd_*`, `SimulationManagerTest.RealFactory_*` | `main` |
 
 ### Person A (primary — orchestration) — remaining
 
 | Task | Files / notes | Status |
 |------|---------------|--------|
-| Merge factory output-map fix + E2E tests | `SimulationRunFactoryImpl.cpp`, `test_simulation_run_factory.cpp`, `test_simulation_manager.cpp` | Unmerged |
+| Merge factory output-map fix + E2E tests | `SimulationRunFactoryImpl.cpp`, `test_simulation_run_factory.cpp`, `test_simulation_manager.cpp` | Done |
 | Missing-input handling (b06) | Missing `simulation.yaml`, bad map path at group scope, invalid composition refs | Partial — startup + per-run map tests exist |
 | Runtime mission errors → `error.log` | Mirror `mission_results[].errors` in per-run log (factory only logs startup errors today) | Not started |
-| Gate B verification | Manual CLI smoke: composition YAML → `simulation_output.yaml` + `output_results/` | Not verified |
+| Gate B verification | Manual CLI smoke: composition YAML → `simulation_output.yaml` + `output_results/` | Done |
 
 ### Person B (parallel — finish runtime + support wiring) — remaining
 
 | Task | Files / notes | Status |
 |------|---------------|--------|
-| Gate B support | Verify CLI path after A merges output-map fix; help debug scenario `-1` / timeouts | Pending |
+| Gate B support | Verify CLI path after A merges output-map fix; help debug scenario `-1` / timeouts | Ready — B can start `Integration.*` |
 | `Integration.*` tests | Real algorithm + mock algorithm (`tests/integration/`) | Not started (Phase 4 scope, but listed at H5) |
 
-**Gate B:** Run `./drone_mapper_simulation` with a small composition YAML; get `simulation_output.yaml` + `output_results/`; failed scenario gets -1 and run continues. **Not verified yet.**
+**Gate B:** Run `./drone_mapper_simulation` with a small composition YAML; get `simulation_output.yaml` + `output_results/`; failed scenario gets -1 and run continues. **Verified** — see `tests/data/configs/composition_continue_after_failure.yaml` and `SimulationManagerTest.RealFactory_ContinuesAfterStartupFailure`.
 
 ---
 
@@ -212,7 +212,7 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 ## Definition of done
 
 - [x] Exact component names; frozen interfaces unchanged
-- [ ] `drone_mapper_simulation` CLI behavior per assignment
+- [x] `drone_mapper_simulation` CLI behavior per assignment
 - [ ] `drone_mapper_simulation_test` with all required `--gtest_filter` prefixes
 - [x] `simulation_output.yaml` + `output_results/` documented in `readme.txt`
 - [ ] Immediate error logging; score -1 on failed continuable scenarios

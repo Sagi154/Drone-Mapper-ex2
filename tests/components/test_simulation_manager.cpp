@@ -249,4 +249,44 @@ TEST(SimulationManagerTest, RealFactory_EndToEnd_WritesOutputMapAndReport) {
     removeDirectory(output_path);
 }
 
+TEST(SimulationManagerTest, RealFactory_ContinuesAfterStartupFailure) {
+    test_support::CapturingErrorLog log;
+    const io::ConfigParseResult<types::SimulationCompositionData> composition_result =
+        test_support::loadContinueAfterFailureComposition(log);
+    ASSERT_TRUE(composition_result.ok);
+    EXPECT_TRUE(log.entries().empty());
+
+    const std::filesystem::path output_path =
+        std::filesystem::temp_directory_path() / "simulation_manager_continue_after_failure";
+    removeDirectory(output_path);
+
+    SimulationManager manager{std::make_unique<SimulationRunFactoryImpl>()};
+    const types::SimulationManagerReport report =
+        manager.run(composition_result.value, output_path);
+
+    ASSERT_GE(report.runs.size(), 2U);
+
+    bool saw_failure = false;
+    bool saw_success = false;
+    for (const types::SimulationResult& run : report.runs) {
+        if (run.mission_score < 0.0) {
+            saw_failure = true;
+        } else {
+            saw_success = true;
+        }
+    }
+    EXPECT_TRUE(saw_failure);
+    EXPECT_TRUE(saw_success);
+
+    const std::filesystem::path yaml_path = output_path / "simulation_output.yaml";
+    ASSERT_TRUE(std::filesystem::exists(yaml_path));
+
+    std::ifstream error_log_stream(io::runErrorLog(output_path, 1));
+    std::string error_line;
+    ASSERT_TRUE(std::getline(error_log_stream, error_line));
+    EXPECT_NE(error_line.find("MAP_FILE_NOT_FOUND"), std::string::npos);
+
+    removeDirectory(output_path);
+}
+
 } // namespace drone_mapper

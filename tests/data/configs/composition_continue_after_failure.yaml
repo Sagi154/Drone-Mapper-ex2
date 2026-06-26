@@ -1,0 +1,12 @@
+simulation_compositions:
+  simulations:
+    - simulation_config: "sim_bad_map.yaml"
+      mission_configs:
+        - "mission_smoke.yaml"
+    - simulation_config: "sim_tiny.yaml"
+      mission_configs:
+        - "mission_smoke.yaml"
+  drone_configs:
+    - "drone_small.yaml"
+  lidar_configs:
+    - "lidar_a.yaml"
