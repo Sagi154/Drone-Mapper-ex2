@@ -9,6 +9,8 @@ types::SimulationConfigData parseSimulationConfig(const std::filesystem::path& p
 
     const auto root = detail::loadYamlFile(path, log, "[simulation_config]");
     if (!root.has_value()) {
+        config.config_load_error =
+            types::ErrorRef{"CONFIG_FILE_NOT_FOUND", path.string()};
         return config;
     }
 
