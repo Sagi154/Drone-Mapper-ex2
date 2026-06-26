@@ -1,6 +1,7 @@
 #include <drone_mapper/SimulationRunImpl.h>
 
 #include <drone_mapper/MapsComparison.h>
+#include <drone_mapper/io/RunErrorLog.h>
 
 #include <stdexcept>
 #include <utility>
@@ -30,6 +31,17 @@ namespace {
     result.resolution_request_status =
         resolutionRequestStatus(mission_config.output_mapping_resolution_factor);
     return result;
+}
+
+void logMissionErrors(const std::filesystem::path& output_map_file,
+                      const std::vector<types::ErrorRef>& errors) {
+    if (errors.empty()) {
+        return;
+    }
+    io::RunErrorLog error_log{output_map_file.parent_path() / "error.log"};
+    for (const types::ErrorRef& error : errors) {
+        error_log.log(error);
+    }
 }
 
 } // namespace
@@ -85,6 +97,7 @@ types::SimulationResult SimulationRunImpl::run() {
     }
 
     const types::MissionRunResult mission_result = mission_control_->runMission();
+    logMissionErrors(output_map_file_, mission_result.errors);
     result.mission_results.push_back(mission_result);
     result.output_map_config = output_map_->getMapConfig();
 
