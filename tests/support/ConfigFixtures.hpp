@@ -19,6 +19,14 @@ namespace drone_mapper::test_support {
 #endif
 }
 
+[[nodiscard]] inline std::filesystem::path benchmarkMapPath() {
+#ifdef DRONE_MAPPER_SOURCE_DIR
+    return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR} / "data_maps" / "benchmark_map.npy";
+#else
+    return std::filesystem::path{"data_maps/benchmark_map.npy"};
+#endif
+}
+
 [[nodiscard]] inline std::filesystem::path configFixturePath(const std::string& filename) {
 #ifdef DRONE_MAPPER_SOURCE_DIR
     return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR} / "tests" / "data" / "configs" / filename;
