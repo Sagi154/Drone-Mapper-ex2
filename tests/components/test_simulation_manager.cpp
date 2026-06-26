@@ -289,4 +289,32 @@ TEST(SimulationManagerTest, RealFactory_ContinuesAfterStartupFailure) {
     removeDirectory(output_path);
 }
 
+TEST(SimulationManagerTest, RealFactory_InvalidDroneRef_ScoreMinusOne) {
+    test_support::CapturingErrorLog log;
+    const io::ConfigParseResult<types::SimulationCompositionData> composition_result =
+        test_support::loadInvalidDroneComposition(log);
+    ASSERT_TRUE(composition_result.ok);
+    ASSERT_TRUE(composition_result.value.drones.front().config_load_error.has_value());
+
+    const std::filesystem::path output_path =
+        std::filesystem::temp_directory_path() / "simulation_manager_invalid_drone";
+    removeDirectory(output_path);
+
+    SimulationManager manager{std::make_unique<SimulationRunFactoryImpl>()};
+    const types::SimulationManagerReport report =
+        manager.run(composition_result.value, output_path);
+
+    ASSERT_EQ(report.runs.size(), 1U);
+    EXPECT_DOUBLE_EQ(report.runs.front().mission_score, -1.0);
+    ASSERT_EQ(report.runs.front().mission_results.front().errors.size(), 1U);
+    EXPECT_EQ(report.runs.front().mission_results.front().errors.front().code, "CONFIG_FILE_NOT_FOUND");
+
+    std::ifstream error_log_stream(io::runErrorLog(output_path, 1));
+    std::string error_line;
+    ASSERT_TRUE(std::getline(error_log_stream, error_line));
+    EXPECT_NE(error_line.find("CONFIG_FILE_NOT_FOUND"), std::string::npos);
+
+    removeDirectory(output_path);
+}
+
 } // namespace drone_mapper

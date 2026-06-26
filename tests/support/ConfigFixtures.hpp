@@ -69,4 +69,24 @@ private:
     return io::parseCompositionFile(configFixturePath("composition_continue_after_failure.yaml"), log);
 }
 
+[[nodiscard]] inline std::filesystem::path corruptMapPath() {
+#ifdef DRONE_MAPPER_SOURCE_DIR
+    return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR} / "tests" / "data" / "maps" / "corrupt_map.npy";
+#else
+    return std::filesystem::path{"tests/data/maps/corrupt_map.npy"};
+#endif
+}
+
+[[nodiscard]] inline io::ConfigParseResult<types::SimulationCompositionData> loadInvalidDroneComposition(
+    io::IRunErrorLog& log) {
+    io::ConfigParseResult<types::SimulationCompositionData> result =
+        io::parseCompositionFile(configFixturePath("composition_invalid_drone.yaml"), log);
+    if (result.ok) {
+        for (types::SimulationConfigData& simulation : result.value.simulations) {
+            simulation.map_filename = goldenMapPath();
+        }
+    }
+    return result;
+}
+
 } // namespace drone_mapper::test_support

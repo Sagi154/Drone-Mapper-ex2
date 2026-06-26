@@ -95,6 +95,8 @@ TEST(YamlConfigParser, MissingFileReturnsDefaultsAndLogsError) {
 
     EXPECT_EQ(config.radius, PhysicalLength{});
     EXPECT_TRUE(log.containsCode("CONFIG_FILE_NOT_FOUND"));
+    ASSERT_TRUE(config.config_load_error.has_value());
+    EXPECT_EQ(config.config_load_error->code, "CONFIG_FILE_NOT_FOUND");
 }
 
 TEST(YamlConfigParser, MissionBoundariesAreIgnoredWithLog) {
@@ -130,6 +132,18 @@ TEST(YamlConfigParser, MissingCompositionFileFailsParse) {
 
     EXPECT_FALSE(result.ok);
     EXPECT_FALSE(result.errors.empty());
+    EXPECT_TRUE(log.containsCode("CONFIG_FILE_NOT_FOUND"));
+}
+
+TEST(YamlConfigParser, CompositionWithMissingDroneRefLoadsErrorOnDroneConfig) {
+    CapturingErrorLog log;
+    const io::ConfigParseResult<types::SimulationCompositionData> result =
+        io::parseCompositionFile(configFixturePath("composition_invalid_drone.yaml"), log);
+
+    ASSERT_TRUE(result.ok);
+    ASSERT_EQ(result.value.drones.size(), 1U);
+    ASSERT_TRUE(result.value.drones.front().config_load_error.has_value());
+    EXPECT_EQ(result.value.drones.front().config_load_error->code, "CONFIG_FILE_NOT_FOUND");
     EXPECT_TRUE(log.containsCode("CONFIG_FILE_NOT_FOUND"));
 }
 
