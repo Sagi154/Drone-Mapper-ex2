@@ -19,7 +19,8 @@ Copy this checklist and verify each item.
 - [ ] Same from alternate `output_path` / composition path
 - [ ] Minor valid config edits still pass
 - [ ] Invalid config exits gracefully (no crash)
-- [ ] Small maps finish in ~10s; none exceed ~1 min (b05)
+- [ ] Component/unit tests: small synthetic maps finish in ~10 s each (b05)
+- [ ] Integration tests (including instructor-provided scenarios): finish within 1 minute
 - [ ] Missing `simulation.yaml` / map files handled with error log (b06)
 
 ## Tests

@@ -187,6 +187,7 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 | Update `docs/HLD.md` if wiring changed | Both | Class + sequence diagrams (e14/e15) |
 | `readme.txt` — build, run, output formats | A | Matches actual behavior |
 | Run `pre-submission-review` skill checklist | Both | All boxes checked |
+| Bug-catch readiness (Review Guideline) | Both | Per-component suites cover enough behaviors to catch >50% of injected bugs; integration scenarios also exercise end-to-end paths |
 
 **Gate C:** `./drone_mapper_simulation_test` all green; all 8 component prefixes + `Integration.*` work; invalid config exits gracefully; missing files handled.
 
@@ -226,7 +227,8 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 |------|------------|
 | Late test harness | Create `tests/` + CMake in Phase 1, not Phase 4 |
 | `.npy` bugs | Golden tests on `data_maps/` first |
-| Test timeout (b05s) | Algorithm is fine; risk is map size in tests — use small/synthetic maps; enforce ~10 s per test |
+| Test timeout (b05s) | Algorithm is fine; risk is map size in tests — use small/synthetic maps; enforce ~10 s per component test |
+| Instructor integration scenarios too slow | Dry-run instructor config/map files locally before submission; enforce ≤1 min per integration test (with and without bugs) |
 | A blocked waiting on B's runtime | A starts factory stub + fixtures in Phase 2 overlap (see timeline) |
 | Factory/runtime interface mismatch | H2 pair session on DI graph before A generalizes factory |
 | Copying bad ex1 patterns | `ex1-anti-patterns` rule + code review each PR |

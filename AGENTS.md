@@ -44,6 +44,15 @@ cmake --build --preset default
 ./build/maps_comparison <origin_map> <target_map> [comparison_config=<path>]
 ```
 
+## Grading (Review Guideline)
+
+Submissions are graded by **bug injection** against your test suite (`context/Exercise 2 Review Guideline.docx`):
+
+- **>50%** of injected bugs caught per component = full marks; **>25%** = partial marks.
+- Isolate tests per component where possible; some bugs may legitimately fail multiple suites.
+- Integration tests use instructor-provided config/map files; must finish within **1 minute** (with and without bugs).
+- Manual code review is lighter than ex1 — comments in most cases; only extremely poor practices affect the grade.
+
 ## Hard rules
 
 - **Never** change skeleton interfaces marked "Do not change".
