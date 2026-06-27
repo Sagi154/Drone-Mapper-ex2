@@ -149,7 +149,7 @@ private:
     composition.simulations.push_back(simulation);
     composition.missions.push_back(mission);
     composition.drones.push_back(io::parseDroneConfig(scenariosDir() / "drone_ex1port.yaml", log));
-    composition.lidars.push_back(io::parseLidarConfig(scenariosDir() / "lidar_scenario45.yaml", log));
+    composition.lidars.push_back(io::parseLidarConfig(configFixturePath("lidar_benchmark.yaml"), log));
     return result;
 }
 

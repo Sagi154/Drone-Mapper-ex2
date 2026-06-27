@@ -203,7 +203,8 @@ TEST(IntegrationTest, BenchmarkMap_RealAlgorithm_ScoresAtLeast90) {
 
     ASSERT_EQ(report.runs.size(), 1U);
     ASSERT_EQ(report.runs.front().mission_results.size(), 1U);
-    EXPECT_GT(report.runs.front().mission_results.front().steps, 0U);
+    EXPECT_EQ(report.runs.front().mission_results.front().status, types::MissionRunStatus::Completed);
+    EXPECT_GT(report.runs.front().mission_results.front().steps, 10U);
     EXPECT_GE(report.runs.front().mission_score, 90.0);
     EXPECT_TRUE(std::filesystem::exists(io::runOutputMap(output_path, 1)));
     EXPECT_TRUE(readAllLines(io::runErrorLog(output_path, 1)).empty());
