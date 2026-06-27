@@ -59,8 +59,9 @@ All `.npy` test maps must follow the same format as `data_maps/benchmark_map.npy
 1. All components + **real** `MappingAlgorithmImpl`
 2. All components + **mock** algorithm (GMock `IMappingAlgorithm`)
 3. Full flow with `benchmark_map.npy` (ClassicCube-2, `29×30×31`) — assert `mission_score` ≥ 90 (instructor-provided scenario; score should approach 100)
+4. Ex1-ported maps `scenario_{3,4,5}_map.npy` — use `scenarios/composition_scenarioN.yaml`; layout from ex1 grading scenarios, converted to ex2 format at 10 cm/voxel
 
-Instructors provide config and map files for integration grading. Each integration test must finish within **1 minute** — with and without injected bugs. Use `tests/data/configs/sim_benchmark.yaml` and `test_support::benchmarkMapPath()`.
+Instructors provide config and map files for integration grading. Each integration test must finish within **1 minute** — with and without injected bugs. Use `tests/data/configs/sim_benchmark.yaml` and `test_support::benchmarkMapPath()` for the benchmark; `scenarios/composition_scenarioN.yaml` for ex1-ported maps.
 
 ## Run
 
