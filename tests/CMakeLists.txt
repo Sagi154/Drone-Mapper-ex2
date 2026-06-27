@@ -122,3 +122,12 @@ target_include_directories(drone_mapper_simulation_test
 )
 add_dependencies(drone_mapper_simulation_test maps_comparison)
 gtest_discover_tests(drone_mapper_simulation_test)
+
+add_drone_mapper_test_suite(drone_mapper_integration_tests integration
+    integration/test_integration_full_flow.cpp
+)
+
+target_include_directories(drone_mapper_integration_tests
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/support
+)
