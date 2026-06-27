@@ -188,6 +188,8 @@ TEST(IntegrationTest, BenchmarkMap_RealAlgorithm_ScoresAtLeast90) {
         test_support::loadBenchmarkComposition(log);
     ASSERT_TRUE(composition_result.ok) << "Failed to load benchmark composition fixture";
     EXPECT_TRUE(log.entries().empty());
+    ASSERT_EQ(composition_result.value.missions.size(), 1U);
+    ASSERT_EQ(composition_result.value.missions.front().max_steps, 20000U);
 
     const std::filesystem::path output_path =
         std::filesystem::temp_directory_path() / "integration_benchmark_real_algorithm";
@@ -200,6 +202,8 @@ TEST(IntegrationTest, BenchmarkMap_RealAlgorithm_ScoresAtLeast90) {
         std::chrono::steady_clock::now() - start);
 
     ASSERT_EQ(report.runs.size(), 1U);
+    ASSERT_EQ(report.runs.front().mission_results.size(), 1U);
+    EXPECT_GT(report.runs.front().mission_results.front().steps, 0U);
     EXPECT_GE(report.runs.front().mission_score, 90.0);
     EXPECT_TRUE(std::filesystem::exists(io::runOutputMap(output_path, 1)));
     EXPECT_TRUE(readAllLines(io::runErrorLog(output_path, 1)).empty());

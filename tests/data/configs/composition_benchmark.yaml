@@ -4,6 +4,6 @@ simulation_compositions:
       mission_configs:
         - "mission_benchmark.yaml"
   drone_configs:
-    - "drone_small.yaml"
+    - "../../../scenarios/drone_ex1port.yaml"
   lidar_configs:
-    - "lidar_a.yaml"
+    - "../../../scenarios/lidar_scenario45.yaml"
