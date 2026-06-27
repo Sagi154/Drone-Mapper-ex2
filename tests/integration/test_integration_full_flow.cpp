@@ -254,12 +254,7 @@ TEST(IntegrationTest, MockAlgorithm_FullRun_CompletesWithScore) {
     removeDirectory(output_path);
 }
 
-class ScenarioIntegrationTest : public testing::TestWithParam<int> {};
-
-// Scenario: ex1-ported hidden maps via scenario composition YAML and real algorithm.
-// Expected: each scenario completes without mission_score -1 within 60 s.
-TEST_P(ScenarioIntegrationTest, Composition_CompletesWithoutError) {
-    const int scenario = GetParam();
+void runScenarioCompositionIntegration(int scenario) {
     test_support::CapturingErrorLog log;
     const io::ConfigParseResult<types::SimulationCompositionData> composition_result =
         test_support::loadScenarioComposition(scenario, log);
@@ -286,8 +281,18 @@ TEST_P(ScenarioIntegrationTest, Composition_CompletesWithoutError) {
     removeDirectory(output_path);
 }
 
-INSTANTIATE_TEST_SUITE_P(Ex1PortedMaps,
-                         ScenarioIntegrationTest,
-                         testing::Values(3, 4, 5));
+// Scenario: ex1-ported hidden maps via scenario composition YAML and real algorithm.
+// Expected: each scenario completes without mission_score -1 within 60 s.
+TEST(IntegrationTest, Scenario3_Composition_CompletesWithoutError) {
+    runScenarioCompositionIntegration(3);
+}
+
+TEST(IntegrationTest, Scenario4_Composition_CompletesWithoutError) {
+    runScenarioCompositionIntegration(4);
+}
+
+TEST(IntegrationTest, Scenario5_Composition_CompletesWithoutError) {
+    runScenarioCompositionIntegration(5);
+}
 
 } // namespace drone_mapper
