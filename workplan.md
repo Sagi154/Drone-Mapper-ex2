@@ -202,7 +202,7 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 | Task | Files / notes | Status |
 |------|---------------|--------|
 | `drone_mapper_simulation_test` umbrella target | Single executable (or alias) aggregating all component suites; register integration sources as B lands them | Not started |
-| `MockLidar` component tests | Implement `test_mock_lidar.cpp`; wire into umbrella target · filter `MockLidar.*` | Not started |
+| `MockLidar` component tests | Implement `test_mock_lidar.cpp`; wire into umbrella target · filter `MockLidar.*` · cover bug classes from Review Guideline (e.g. ray truncated to 2/3 z_max; obstacle at far end of beam not detected) | Not started |
 | `readme.txt` — build, run, output formats | Align with `config_load_error`, startup vs mission `error.log`, corrupt `.npy`, invalid refs | Not started |
 | HLD — orchestration / I/O | `SimulationManager`, factory, `SimulationRunImpl`, CLI, error logging, YAML flow, missing-input handling | Not started |
 | Bug-isolation — A-owned suites | Break factory/manager/CLI/config/MockLidar; confirm B prefixes still pass | Not started |
@@ -211,7 +211,7 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 
 | Task | Files / notes | Status |
 |------|---------------|--------|
-| Integration test — real algorithm | `tests/integration/` · filter `Integration.*` | Not started |
+| Integration test — real algorithm | `tests/integration/` · filter `Integration.*` · use `tests/data/configs/sim_benchmark.yaml` + `benchmark_map.npy` (instructor-provided scenario, 29×30×31); must complete **≤1 min with and without injected bugs** (Review Guideline) · also cover ex1-ported maps (`scenarios/composition_scenarioN.yaml`) | Not started |
 | Integration test — mock `IMappingAlgorithm` | GMock algorithm wired through factory/run | Not started |
 | HLD — runtime / algorithm | Mission loop, `DroneControlImpl::step`, `MappingAlgorithmImpl`, `MapsComparison` | Not started |
 | Bug-isolation — B-owned suites | Break drone/mission/algorithm/comparison; confirm A prefixes still pass | Not started |
@@ -225,7 +225,7 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 | ex1 anti-patterns review | Both | Walk `docs/ex1-mistakes.md` on owned code before submission                                                                      |
 | Bug-catch readiness (Review Guideline) | Both | Per-component suites cover enough behaviors to catch >50% of injected bugs; integration scenarios also exercise end-to-end paths |
 
-**Gate C:** `./drone_mapper_simulation_test` all green; all 8 component prefixes + `Integration.*` work; invalid config exits gracefully; missing files handled (b06 on `main`).
+**Gate C:** `./drone_mapper_simulation_test` all green; all 8 component prefixes + `Integration.*` work; invalid config exits gracefully; missing files handled (b06 on `main`); integration suite completes ≤1 min with and without injected bugs (benchmark_map.npy scenario).
 
 ---
 
@@ -238,6 +238,7 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 | Task | Owner | Notes |
 |------|-------|-------|
 | Verify algorithm correctness on assignment-provided maps | Both | Confirm ex1 port behaves correctly end-to-end |
+| Dry-run `sim_benchmark.yaml` integration timing | Both | Run integration suite with `benchmark_map.npy`; confirm ≤1 min clean; re-run with each per-component bug injection if possible |
 | HLD PDF for submission | Both | From `docs/HLD.md` |
 | `bonus.txt` | Both | Only if claiming bonus |
 | Final multi-scenario sanity run | Both | Clean logs, reproducible scores |
