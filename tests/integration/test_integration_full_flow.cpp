@@ -184,7 +184,7 @@ public:
 // Expected: mission completes without errors, writes output map, finishes within 60 s.
 // Score threshold is permissive (>= 0): current exploration scores ~0.04 on this map on main;
 // target >= 90 is a Phase 5 algorithm-tuning goal (see workplan.md).
-TEST(IntegrationTest, BenchmarkMap_RealAlgorithm_CompletesWithoutError) {
+TEST(Integration, BenchmarkMap_RealAlgorithm_CompletesWithoutError) {
     test_support::CapturingErrorLog log;
     const io::ConfigParseResult<types::SimulationCompositionData> composition_result =
         test_support::loadBenchmarkComposition(log);
@@ -217,7 +217,7 @@ TEST(IntegrationTest, BenchmarkMap_RealAlgorithm_CompletesWithoutError) {
 
 // Scenario: GMock IMappingAlgorithm wired through real DroneControl/MissionControl/SimulationRunImpl.
 // Expected: mission completes on first Finished command, score computed, nextStep invoked.
-TEST(IntegrationTest, MockAlgorithm_FullRun_CompletesWithScore) {
+TEST(Integration, MockAlgorithm_FullRun_CompletesWithScore) {
     types::SimulationConfigData simulation = test_support::e2eSimulation();
     const types::MissionConfigData mission = integrationMission();
     const types::DroneConfigData drone = integrationDrone();
@@ -290,15 +290,15 @@ void runScenarioCompositionIntegration(int scenario) {
 
 // Scenario: ex1-ported hidden maps via scenario composition YAML and real algorithm.
 // Expected: each scenario completes without mission_score -1 within 60 s.
-TEST(IntegrationTest, Scenario3_Composition_CompletesWithoutError) {
+TEST(Integration, Scenario3_Composition_CompletesWithoutError) {
     runScenarioCompositionIntegration(3);
 }
 
-TEST(IntegrationTest, Scenario4_Composition_CompletesWithoutError) {
+TEST(Integration, Scenario4_Composition_CompletesWithoutError) {
     runScenarioCompositionIntegration(4);
 }
 
-TEST(IntegrationTest, Scenario5_Composition_CompletesWithoutError) {
+TEST(Integration, Scenario5_Composition_CompletesWithoutError) {
     runScenarioCompositionIntegration(5);
 }
 
