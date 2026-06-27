@@ -49,6 +49,13 @@ Integration scenarios (including instructor-provided config/map files) must fini
 - Config fixture: `tests/data/configs/sim_benchmark.yaml`
 - Path helper: `test_support::benchmarkMapPath()` in `tests/support/ConfigFixtures.hpp`
 
+## Ex1-ported scenario maps (3–5)
+
+`data_maps/scenario_{3,4,5}_map.npy` — ex1 grading test maps converted to valid ex2 `.npy` inputs (layout preserved, 10 cm/voxel). Use for integration/end-to-end runs alongside the benchmark map; must finish within **1 minute**.
+
+- Compositions: `scenarios/composition_scenario3.yaml`, `composition_scenario4.yaml`, `composition_scenario5.yaml`
+- CI: `docker-build-test` job in `.github/workflows/ci.yml` runs all three after unit tests
+
 ## Coverage
 
 Happy path + error cases per component. Use GMock for direct dependencies only.

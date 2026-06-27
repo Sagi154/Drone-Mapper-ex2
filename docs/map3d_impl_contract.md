@@ -49,6 +49,21 @@ If `MappingBounds` are unset (all zero), they are derived from array shape, offs
 
 The benchmark map may also contain ClassicCube export type codes (`2`, `3`, `4`, …). `Map3DImpl` treats only `0`/`1` as Empty/Occupied; other stored bytes map to `Unmapped`. Use `sim_benchmark.yaml` for integration scenarios on this map.
 
+## Ex1-ported scenario maps (3–5)
+
+`data_maps/scenario_{3,4,5}_map.npy` are ex1 instructor test maps converted to valid ex2 hidden-map inputs. Source was sparse ex1 `map_input.txt` (occupied-cell list + bounds line); conversion preserves voxel layout as dense `uint8` arrays.
+
+| File | Shape | World at 10 cm/voxel | Ex1 layout |
+|------|-------|----------------------|------------|
+| `scenario_3_map.npy` | `(11, 11, 9)` | 100×100×80 cm | Hollow shell, 2-voxel passages |
+| `scenario_4_map.npy` | `(16, 16, 16)` | 150×150×150 cm | Outer shell + inner room partitions |
+| `scenario_5_map.npy` | `(21, 21, 21)` | 200×200×200 cm | Periodic grid maze |
+
+- Resolution: `10 cm` per voxel (ex1 integer grid cells reinterpreted at 10 cm, same as `benchmark_map.npy`).
+- Configs: `scenarios/composition_scenarioN.yaml` (+ `sim_scenarioN.yaml`, shared drone/mission/lidar YAML in `scenarios/`).
+- Regenerate: `python scripts/convert_ex1_scenario.py <ex1_scenario_dir> data_maps/scenario_N_map.npy` (requires ex1 `map_input.txt` source).
+- CI: `.github/workflows/ci.yml` (`docker-build-test` job, after unit tests).
+
 When writing `.npy` test fixtures in Python/NumPy:
 
 ```python

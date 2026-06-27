@@ -32,7 +32,28 @@ TAU Advanced Topics in Programming, Assignment 2. Course skeleton is merged at r
 | `refactor_by_component.md` | Full porting table |
 | `workplan.md` | Team execution plan |
 | `readme.txt` | Build/run + **agreed output layout** (`run_NNNN`, YAML schema) |
+| `docs/map3d_impl_contract.md` | `.npy` format, world↔voxel mapping, reference maps |
 | `context/` | Original assignment and review docx files |
+
+## Test maps
+
+Hidden-map inputs live in `data_maps/` as `uint8` `.npy` (C-order, `0`=Empty, `1`=Occupied). See `docs/map3d_impl_contract.md`.
+
+| Map | Origin | Shape | Notes |
+|-----|--------|-------|-------|
+| `benchmark_map.npy` | Instructor skeleton (ClassicCube-2) | `(29, 30, 31)` | Integration benchmark; config `tests/data/configs/sim_benchmark.yaml` |
+| `scenario_3_map.npy` | Ex1 test map, converted | `(11, 11, 9)` | Hollow shell + passages; ex1 scenario 3 layout at 10 cm/voxel |
+| `scenario_4_map.npy` | Ex1 test map, converted | `(16, 16, 16)` | Outer shell + inner partitions; ex1 scenario 4 |
+| `scenario_5_map.npy` | Ex1 test map, converted | `(21, 21, 21)` | Grid maze; ex1 scenario 5 |
+
+**Ex1-ported scenarios (3–5):** Originally sparse ex1 `map_input.txt` files used for ex1 grading. Converted to valid ex2 hidden maps (`scripts/convert_ex1_scenario.py`) with matching YAML in `scenarios/` (`composition_scenarioN.yaml`, `sim_scenarioN.yaml`, shared drone/mission/lidar configs). Voxel layout matches ex1; coordinates use 10 cm resolution (ex1 integer cells × 10 cm).
+
+Run locally:
+```bash
+./build/drone_mapper_simulation scenarios/composition_scenario3.yaml /tmp/out3
+```
+
+CI: the `docker-build-test` job in `.github/workflows/ci.yml` runs all three via Docker after unit tests; scores are printed in the **Check scenario mission scores** step log.
 
 ## Build and run
 
