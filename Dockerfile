@@ -22,6 +22,7 @@ COPY include ./include
 COPY src ./src
 COPY tests ./tests
 COPY data_maps ./data_maps
+COPY scenarios ./scenarios
 
 ARG CMAKE_BUILD_PARALLEL_LEVEL=4
 ENV CMAKE_BUILD_PARALLEL_LEVEL=${CMAKE_BUILD_PARALLEL_LEVEL}

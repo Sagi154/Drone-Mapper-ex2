@@ -218,11 +218,12 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 
 ### Together (after individual tasks land)
 
-| Task | Owner | Deliverable |
-|------|-------|-------------|
-| Run `pre-submission-review` skill checklist | Both | All boxes checked |
-| Gate C verification | Both | All 8 filters + `Integration.*` green on `drone_mapper_simulation_test` |
-| ex1 anti-patterns review | Both | Walk `docs/ex1-mistakes.md` on owned code before submission |
+| Task | Owner | Deliverable                                                                                                                      |
+|------|-------|----------------------------------------------------------------------------------------------------------------------------------|
+| Run `pre-submission-review` skill checklist | Both | All boxes checked                                                                                                                |
+| Gate C verification | Both | All 8 filters + `Integration.*` green on `drone_mapper_simulation_test`                                                          |
+| ex1 anti-patterns review | Both | Walk `docs/ex1-mistakes.md` on owned code before submission                                                                      |
+| Bug-catch readiness (Review Guideline) | Both | Per-component suites cover enough behaviors to catch >50% of injected bugs; integration scenarios also exercise end-to-end paths |
 
 **Gate C:** `./drone_mapper_simulation_test` all green; all 8 component prefixes + `Integration.*` work; invalid config exits gracefully; missing files handled (b06 on `main`).
 
@@ -262,7 +263,8 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 |------|------------|
 | Late test harness | Create `tests/` + CMake in Phase 1, not Phase 4 · **A:** umbrella `drone_mapper_simulation_test` in Phase 4 |
 | `.npy` bugs | Golden tests on `data_maps/` first |
-| Test timeout (b05s) | Algorithm is fine; risk is map size in tests — use small/synthetic maps; enforce ~10 s per test |
+| Test timeout (b05s) | Algorithm is fine; risk is map size in tests — use small/synthetic maps; enforce ~10 s per component test |
+| Instructor integration scenarios too slow | Dry-run instructor config/map files locally before submission; enforce ≤1 min per integration test (with and without bugs) |
 | A blocked waiting on B's runtime | A starts factory stub + fixtures in Phase 2 overlap (see timeline) |
 | Factory/runtime interface mismatch | H2 pair session on DI graph before A generalizes factory |
 | Copying bad ex1 patterns | `ex1-anti-patterns` rule + code review each PR |

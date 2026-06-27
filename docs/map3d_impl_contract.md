@@ -39,6 +39,25 @@ If `MappingBounds` are unset (all zero), they are derived from array shape, offs
 - Mutable output maps may use `int8` to store full `VoxelOccupancy` values.
 - `save(path)` writes the backing `NpyArray` via TinyNPY `SaveNPY`.
 
+## Reference map (canonical format)
+
+`data_maps/benchmark_map.npy` (ClassicCube-2, shape `(29, 30, 31)`, `uint8`) is the instructor-provided reference map from the skeleton. All synthetic test maps must use the same on-disk format:
+
+- dtype: `uint8` (hidden/input maps) or `int8` (mutable output maps)
+- shape: 3D `(nx, ny, nz)` — x=dim0, y=dim1, z=dim2, C-order
+- values: `0` = Empty, `1` = Occupied for student-authored fixtures
+
+The benchmark map may also contain ClassicCube export type codes (`2`, `3`, `4`, …). `Map3DImpl` treats only `0`/`1` as Empty/Occupied; other stored bytes map to `Unmapped`. Use `sim_benchmark.yaml` for integration scenarios on this map.
+
+When writing `.npy` test fixtures in Python/NumPy:
+
+```python
+import numpy as np
+arr = np.zeros((nx, ny, nz), dtype=np.uint8)
+arr[ix, iy, iz] = 1   # mark occupied voxels
+np.save("my_test_map.npy", arr)
+```
+
 ## Tests
 
 ```bash

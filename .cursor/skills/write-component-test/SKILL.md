@@ -28,9 +28,16 @@ TEST(IntegrationTest, FullFlowWithRealAlgorithm) { ... }       // Integration.*
 
 ## Isolation (grading)
 
+Per Review Guideline — instructors inject bugs and run your suite per component:
+
 - Mock only **direct** dependencies via GMock interfaces.
 - Do not include unrelated component internals in assertions.
-- Bug in component X should fail only X's tests (≥60% detection target).
+- Bug in component X should be caught by X's tests (>50% for full marks, >25% for partial).
+- A destructive bug may fail multiple suites — still isolate where possible.
+
+## MockLidar
+
+Skeleton already implements `MockLidar`; write tests only. Example bug: rays reach only 2/3 of `z_max` — test obstacles at the beam's far end and other ray-boundary cases.
 
 ## Coverage checklist
 
@@ -39,10 +46,21 @@ TEST(IntegrationTest, FullFlowWithRealAlgorithm) { ... }       // Integration.*
 - [ ] Error returns and logging hooks
 - [ ] Missing file paths (b06)
 
+## Map format for test fixtures
+
+All `.npy` test maps must follow the same format as `data_maps/benchmark_map.npy`:
+
+- dtype `uint8`, 3D C-order array `(nx, ny, nz)`
+- Create with: `np.zeros((nx, ny, nz), dtype=np.uint8)`, set occupied voxels to `1`
+- See `docs/map3d_impl_contract.md` for world↔voxel mapping formula
+
 ## Integration tests (min 2)
 
 1. All components + **real** `MappingAlgorithmImpl`
 2. All components + **mock** algorithm (GMock `IMappingAlgorithm`)
+3. Full flow with `benchmark_map.npy` (ClassicCube-2, `29×30×31`) — assert `mission_score` ≥ 90 (instructor-provided scenario; score should approach 100)
+
+Instructors provide config and map files for integration grading. Each integration test must finish within **1 minute** — with and without injected bugs. Use `tests/data/configs/sim_benchmark.yaml` and `test_support::benchmarkMapPath()`.
 
 ## Run
 
