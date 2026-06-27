@@ -1,6 +1,6 @@
 # Assignment 2 Skeleton HLD
 
-This document describes the current high-level design of the Assignment 2 refactor skeleton. Most implementation classes are intentionally minimal stubs. `MockLidar` is the main exception: it preserves the provided mock sensor ray-marching behavior.
+This document describes the implemented Assignment 2 design. Orchestration, runtime, scoring, and test isolation are documented below; see **Implemented Components** for current coverage and remaining gaps.
 
 ## Main Components
 
@@ -95,6 +95,7 @@ classDiagram
     }
 
     class SimulationRunFactoryImpl {
+        -int next_run_id_
         +create(sim, mission, drone, lidar, output_path) run
     }
 
@@ -351,20 +352,58 @@ stateDiagram-v2
     Moving --> Planning : stall detected (blocked cell added)
 ```
 
-**Scanning phase:**
+### Scanning phase
+
 - Builds a set of scan orientations covering a hemisphere around the current position (circle rings with angular spacing derived from lidar `z_max` and drone radius).
 - Emits one orientation per `nextStep` call.
 - After all orientations are emitted, counts newly mapped cells. If no progress after multiple passes, forces a transition to Planning even without new data.
 
-**Planning phase:**
+### Planning phase
+
 - Calls `MappingAlgorithmFrontier::findPath` — BFS through confirmed-empty cells on the output map toward the nearest unmapped frontier.
 - If no frontier is reachable directly, tries `findExplorePath` (nearest unknown neighbor ignoring passability) then `findUnstickPath` (short path out of a blocked region).
 - A retry counter (`scan_pass`) allows up to `kMaxScanPassIndex` (2) re-scans before giving up. Each retry expands the proximity sphere used to test for local unknown voxels.
 - When no path is found after all retries: returns `AlgorithmStatus::Finished` (all voxels mapped) or `AlgorithmStatus::FinishedWithUnmappableVoxels` (unknown voxels remain but are unreachable).
 
-**Moving phase:**
+### Moving phase
+
 - Follows the waypoints in `current_path` by emitting rotate/advance/elevate commands toward each waypoint using `movementToward`.
 - Stall detection: if position does not change for `kMaxMovingStallTicks` (8) consecutive steps, the current waypoint cell is added to `blocked_cells` and the algorithm transitions back to Planning.
+
+## Orchestration and I/O Components
+
+### SimulationManager
+
+`SimulationManager::run()` expands the composition cartesian product in loop order: `simulations × missions × drones × lidars`. For each combination it calls `ISimulationRunFactory::create(...)`, executes `ISimulationRun::run()`, and collects a `types::SimulationResult`. It tracks a 1-based `run_id` and the four `config_indices` used for each run. After all runs complete it assembles `types::SimulationManagerReport` (timestamp, metric, score range, error score) and writes `simulation_output.yaml` via `io::writeSimulationOutputYaml`.
+
+### SimulationRunFactoryImpl
+
+Each `create(...)` call assigns the next `run_id` from `next_run_id_`, creates `output_results/run_NNNN/` via `io::runOutputDir`, and opens the per-run `error.log` via `io::runErrorLog`. It calls `appendConfigLoadErrors` for all four config types (simulation, mission, drone, lidar) and logs any parse errors immediately. When the simulation config is valid it calls `loadHiddenMap`, which returns `MAP_FILE_NOT_FOUND` on a missing or corrupt `.npy`. It wires the full DI graph: `MockGPS` → `MockMovement` + `MockLidar` → `MappingAlgorithmImpl` → `DroneControlImpl` → `MissionControlImpl`, then transfers ownership into `SimulationRunImpl` along with configs, the output map path, and any startup errors.
+
+### SimulationRunImpl
+
+Two execution paths. If startup errors are present, `run()` returns immediately with `mission_score: -1` and a `MissionRunResult` in `Error` status — no mission loop runs. Otherwise it calls `mission_control_->runMission()`, mirrors mission errors to the per-run `error.log` via `logMissionErrors`, copies `output_map_config` from the output map, and scores via `MapsComparison::compare` when the mission completes or hits `max_steps`. On `MissionRunStatus::Error` it returns `mission_score: -1`. `resolution_request_status` is derived from `output_mapping_resolution_factor`.
+
+### CLI / main
+
+`drone_mapper_simulation_main.cpp` parses CLI args via `io::parseSimulationCliArgs` (composition YAML path and output path, with CWD defaults). It loads the composition via `io::parseCompositionFile` using `io::StderrErrorLog`. On parse failure it logs errors to stderr and returns 1 without writing output files. On success it constructs `SimulationRunFactoryImpl`, runs `SimulationManager::run(...)`, and prints the run count to stdout.
+
+### Error Logger / I/O
+
+- `io::RunErrorLog` — per-run file at `output_results/run_NNNN/error.log`; each `log()` call writes one line and flushes immediately.
+- `io::StderrErrorLog` — composition-level errors (missing or unparseable composition YAML); also immediate flush.
+- `io::RunPathHelpers` — shared path helpers: `runOutputDir`, `runOutputMap`, `runErrorLog`.
+
+Error log line format: `<ISO-8601 UTC> <ERROR_CODE> <user-facing message>`. Runtime codes only — not rubric codes like `e05` or `b06`.
+
+### Missing-input handling
+
+| Failure | Error code | Outcome |
+|---------|-----------|---------|
+| Composition YAML missing/unparseable | (stderr, no runtime code) | `main` returns 1; no output files |
+| Individual config YAML parse error | `config_load_error.code` from parsed config | `mission_score: -1`; run continues |
+| Hidden map missing or corrupt `.npy` | `MAP_FILE_NOT_FOUND` | `mission_score: -1`; run continues |
+| Mission loop error | codes from `MissionRunResult.errors` | `mission_score: -1`; run continues |
 
 ## Scoring (MapsComparison)
 
@@ -392,6 +431,21 @@ Each B-owned GTest suite is scoped to a single component so that a bug injected 
 
 **Isolation guarantee:** A bug injected into `MapsComparison::compare` (e.g. wrong denominator) will fail `MapsComparison.*` and affect `SimulationRun.*` score assertions and `Integration.*`, but must not touch `DroneControl.*`, `MissionControl.*`, or `MappingAlgorithm.*` — because those suites use a `MockMapsComparison` or avoid calling `compare` directly.
 
+## Bug-Isolation Coverage (A-Owned Suites)
+
+Each A-owned GTest suite is scoped to orchestration, I/O, or sensor mock behavior so that a bug injected into that layer fails its own suite (and `Integration.*` when end-to-end), leaving B-owned runtime suites green when mocks isolate the dependency.
+
+| Suite | Key failure modes isolated |
+|-------|---------------------------|
+| `SimulationManager.*` | cartesian product skips combinations; failed run aborts whole composition; `run_id` / `config_indices` mismatch; `simulation_output.yaml` missing or wrong schema; report metadata (`generated_at_utc`, `metric`, `error_score`) wrong; invalid composition ref not scored -1 |
+| `SimulationRun.*` | factory output layout wrong (`run_NNNN/` paths); hidden map not loaded from disk; missing/corrupt `.npy` not logged or not scored -1; invalid per-config YAML not scored -1; startup errors do not skip mission; mission errors not mirrored to `error.log`; `mission_score: -1` on error; max-steps run not scored |
+| `MockLidar.*` | open-beam miss returns wrong length (not max-range cm); obstacle at `z_max` not detected; obstacle one voxel before max not detected; obstacle beyond max falsely detected; obstacle before `z_min` returns non-zero; zero `fov_circles` returns non-empty scan |
+| `YamlConfigParser.*` | config fields not parsed; missing file does not set `config_load_error`; composition mis-aligns simulations/missions; missing composition file not reported |
+| `SimulationCliTest.*` | default composition path wrong; explicit paths not honored; missing composition file parse failure not detected |
+| `RunErrorLog.*` | log line format wrong; entries not flushed immediately; parent directory not created; multiple entries not appended |
+
+**Isolation guarantee:** A bug injected into `SimulationManager::run` (e.g. abort on first failure) will fail `SimulationManager.*` and `Integration.*`, but must not touch `DroneControl.*`, `MissionControl.*`, `MappingAlgorithm.*`, or `MapsComparison.*` when those suites use mock factories or avoid the manager loop. A bug in `MockLidar::traceBeam` fails `MockLidar.*`, scan-related `DroneControl.*` tests (which wire the real `MockLidar`, not a GMock), and `Integration.*` — but not pure movement-order or step-0 null-scan `DroneControl.*` tests that do not assert on scan distances or voxel mapping.
+
 ## Implemented Components
 
 - `DroneControlImpl::step` — movement-before-scan pipeline with `ScanResultToVoxels`; marks drone footprint empty in output map before calling algorithm.
@@ -403,3 +457,7 @@ Each B-owned GTest suite is scoped to a single component so that a bug injected 
 - `drone_mapper_simulation_main` — CLI arg parsing via `io::parseSimulationCliArgs`; composition loading via `io::parseCompositionFile`; logs startup failures to stderr; returns gracefully.
 - YAML parsers (`src/io/`) — drone, mission, lidar, simulation, and composition; nested composition expands to aligned `simulations[]`/`missions[]` pairs.
 - `MapsComparison::compare` — union-of-known-cells scoring; used by `SimulationRunImpl` and `maps_comparison` CLI.
+
+**Remaining gaps:**
+
+- Movement legality checks at simulation-run level (future).
