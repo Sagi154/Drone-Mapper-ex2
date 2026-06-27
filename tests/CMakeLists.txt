@@ -39,7 +39,7 @@ set(DRONE_MAPPER_COMPONENT_TEST_SOURCES
     components/test_mission_control.cpp
     components/test_maps_comparison.cpp
     components/test_mock_lidar.cpp
-    # integration/test_integration.cpp  # Person B adds Integration.*
+    integration/test_integration_full_flow.cpp
 )
 
 # Implemented component suites only — add stub files here once they contain real tests.

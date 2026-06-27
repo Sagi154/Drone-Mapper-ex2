@@ -91,11 +91,13 @@ jobs:
           docker run --rm drone-mapper-ex2-ci:latest \
             ctest --test-dir build/ci -L maps-comparison --output-on-failure
 
-      # Assignment-required single binary; smoke MockLidar filter (full umbrella run duplicates split suites).
+      # Assignment-required single binary; smoke required filters (full umbrella run duplicates split suites).
       - name: Run umbrella simulation test
         run: |
           docker run --rm drone-mapper-ex2-ci:latest \
             ./build/ci/tests/drone_mapper_simulation_test --gtest_filter=MockLidar.*
+          docker run --rm drone-mapper-ex2-ci:latest \
+            ./build/ci/tests/drone_mapper_simulation_test --gtest_filter=Integration.*
 
       - name: Run integration tests
         run: |
