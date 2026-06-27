@@ -130,7 +130,7 @@ error.log line format
   <ISO-8601 UTC timestamp> <ERROR_CODE> <user-facing message>
 
   Example:
-    2026-06-20T14:32:01Z MAP_LOAD_FAILED Could not open map file: data_maps/missing.npy
+    2026-06-20T14:32:01Z MAP_FILE_NOT_FOUND data_maps/missing.npy
 
 Failed continuable scenarios
   - mission_score in simulation_output.yaml is -1

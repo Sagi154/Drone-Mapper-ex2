@@ -181,7 +181,7 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 
 **Outcome:** All required GTest filters pass; HLD matches code; assignment test binary name works.
 
-**Progress:** All 8 required filter families implemented and wired into `drone_mapper_simulation_test`; CI runs split suites plus umbrella smoke for `MockLidar.*` and `Integration.*`. B-owned HLD sections and bug-isolation table done (PR #28). Remaining: `readme.txt`, A-owned HLD updates, A bug-isolation audit, joint Gate C sign-off.
+**Progress:** All 8 required filter families implemented and wired into `drone_mapper_simulation_test`; CI runs split suites plus umbrella smoke for `MockLidar.*` and `Integration.*`. A-owned docs (readme, HLD orchestration, bug-isolation) done (PR #29). B-owned HLD sections and bug-isolation table done (PR #28). Remaining: joint Gate C sign-off.
 
 Phase 3 left Person A with orchestration largely done and Person B with the mandatory `Integration.*` gaps. Split Phase 4 by **component ownership**, not a 50/50 “both” bucket — shared items have explicit leads below.
 
@@ -207,9 +207,9 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 | `MockLidar` component tests | `test_mock_lidar.cpp` · filter `MockLidar.*` · ray boundary bug classes | Done — PR #27 |
 | CI — lidar + umbrella smoke | `ctest -L lidar`; umbrella `MockLidar.*` + `Integration.*` | Done — PR #27 |
 | Integration sources in umbrella | `integration/test_integration_full_flow.cpp` in `DRONE_MAPPER_COMPONENT_TEST_SOURCES` | Done — PR #27 |
-| `readme.txt` — build, run, output formats | Align with `config_load_error`, startup vs mission `error.log`, corrupt `.npy`, invalid refs | Not started |
-| HLD — orchestration / I/O | `SimulationManager`, factory, `SimulationRunImpl`, CLI, error logging, YAML flow, missing-input handling | Not started |
-| Bug-isolation — A-owned suites | Break factory/manager/CLI/config/MockLidar; confirm B prefixes still pass | Not started |
+| `readme.txt` — build, run, output formats | Align with `config_load_error`, startup vs mission `error.log`, corrupt `.npy`, invalid refs | Done — PR #29 |
+| HLD — orchestration / I/O | `SimulationManager`, factory, `SimulationRunImpl`, CLI, error logging, YAML flow, missing-input handling | Done — PR #29 |
+| Bug-isolation — A-owned suites | Break factory/manager/CLI/config/MockLidar; confirm B prefixes still pass | Done — PR #29 |
 
 ### Person B (runtime, integration)
 
@@ -230,7 +230,7 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 | ex1 anti-patterns review | Both | Walk `docs/ex1-mistakes.md` on owned code before submission — B-side done (PR #28); A-side pending |
 | Bug-catch readiness (Review Guideline) | Both | Per-component suites cover enough behaviors to catch >50% of injected bugs; integration scenarios also exercise end-to-end paths |
 
-**Gate C:** `./drone_mapper_simulation_test` all green; all 8 component prefixes + `Integration.*` work from the umbrella binary; invalid config exits gracefully; missing files handled (b06 on `main`); integration suite completes ≤1 min with and without injected bugs (`benchmark_map.npy` scenario). **Test harness done; joint verification + docs still open.**
+**Gate C:** `./drone_mapper_simulation_test` all green; all 8 component prefixes + `Integration.*` work from the umbrella binary; invalid config exits gracefully; missing files handled (b06 on `main`); integration suite completes ≤1 min with and without injected bugs (`benchmark_map.npy` scenario). **Docs complete; joint verification still open.**
 
 ---
 
@@ -261,7 +261,7 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 - [x] Immediate error logging; score -1 on failed continuable scenarios
 - [ ] No ex1 anti-patterns (`docs/ex1-mistakes.md`)
 - [x] Small maps finish in reasonable time
-- [ ] `docs/HLD.md` (and PDF) match implementation
+- [x] `docs/HLD.md` (and PDF) match implementation — orchestration + runtime sections; bug-isolation tables for A and B suites
 
 ## Risks
 
