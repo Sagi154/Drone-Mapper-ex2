@@ -86,6 +86,11 @@ jobs:
           docker run --rm drone-mapper-ex2-ci:latest \
             ctest --test-dir build/ci -L maps-comparison --output-on-failure
 
+      - name: Run integration tests
+        run: |
+          docker run --rm drone-mapper-ex2-ci:latest \
+            ctest --test-dir build/ci -L integration --output-on-failure
+
       - name: Run scenario simulations
         run: |
           set -euo pipefail
