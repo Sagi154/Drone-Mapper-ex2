@@ -1,7 +1,7 @@
 # Assignment 2 — Work Plan
 
 **Deadline:** July 1, 2026, 23:30  
-**Team:** 2 people · **Repo state:** Phase 3 complete; Phase 4 in progress (Gate C)
+**Team:** 2 people · **Repo state:** Phase 4 in progress — test harness complete; Gate C pending docs, HLD, and joint sign-off
 
 ## Goal
 
@@ -171,7 +171,7 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 | Orchestration component tests | `SimulationManager.*`, `SimulationRun.*` (mocks + real wiring) | Done |
 | Real-wiring E2E tests | `SimulationRun.Factory_EndToEnd_*`, `SimulationManagerTest.RealFactory_*` | Done |
 | Gate B support / verification | CLI path verified on `main`; scenario `-1` / continue-after-failure / `error.log` | Done |
-| `Integration.*` tests | Real algorithm + mock algorithm (`tests/integration/`) | Not started — Phase 4 (H5 handoff) |
+| `Integration.*` tests | Real algorithm + mock algorithm (`tests/integration/`) | Done — PR #26 on `main`; wired into umbrella in PR #27 |
 
 **Gate B:** Run `./drone_mapper_simulation` with a small composition YAML; get `simulation_output.yaml` + `output_results/`; failed scenario gets -1 and run continues. **Verified** — see `tests/data/configs/composition_continue_after_failure.yaml` and `SimulationManagerTest.RealFactory_ContinuesAfterStartupFailure`.
 
@@ -180,6 +180,8 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 ## Phase 4 — Tests & compliance (Days 7–9)
 
 **Outcome:** All required GTest filters pass; HLD matches code; assignment test binary name works.
+
+**Progress:** All 8 required filter families implemented and wired into `drone_mapper_simulation_test`; CI runs split suites plus umbrella smoke for `MockLidar.*` and `Integration.*`. Remaining: `readme.txt`, HLD updates, bug-isolation audits, joint Gate C sign-off.
 
 Phase 3 left Person A with orchestration largely done and Person B with the mandatory `Integration.*` gaps. Split Phase 4 by **component ownership**, not a 50/50 “both” bucket — shared items have explicit leads below.
 
@@ -193,16 +195,18 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 | `DroneControl.*` | B | ✅ |
 | `MappingAlgorithm.*` | B | ✅ |
 | `MapsComparison.*` | B | ✅ |
-| `MockLidar.*` | A | ❌ `test_mock_lidar.cpp` stub; not in CMake |
-| `Integration.*` | B | ❌ `tests/integration/` missing |
-| `drone_mapper_simulation_test` target | A | ❌ CMake builds 7 separate executables; assignment expects one binary |
+| `MockLidar.*` | A | ✅ — PR #27 |
+| `Integration.*` | B | ✅ — PR #26; suite `Integration` · wired into umbrella PR #27 |
+| `drone_mapper_simulation_test` target | A | ✅ — PR #27 |
 
 ### Person A (orchestration, I/O, test harness)
 
 | Task | Files / notes | Status |
 |------|---------------|--------|
-| `drone_mapper_simulation_test` umbrella target | Single executable (or alias) aggregating all component suites; register integration sources as B lands them | Not started |
-| `MockLidar` component tests | Implement `test_mock_lidar.cpp`; wire into umbrella target · filter `MockLidar.*` · cover bug classes from Review Guideline (e.g. ray truncated to 2/3 z_max; obstacle at far end of beam not detected) | Not started |
+| `drone_mapper_simulation_test` umbrella target | Single executable aggregating all component + integration sources; split targets kept for fast CI | Done — PR #27 |
+| `MockLidar` component tests | `test_mock_lidar.cpp` · filter `MockLidar.*` · ray boundary bug classes | Done — PR #27 |
+| CI — lidar + umbrella smoke | `ctest -L lidar`; umbrella `MockLidar.*` + `Integration.*` | Done — PR #27 |
+| Integration sources in umbrella | `integration/test_integration_full_flow.cpp` in `DRONE_MAPPER_COMPONENT_TEST_SOURCES` | Done — PR #27 |
 | `readme.txt` — build, run, output formats | Align with `config_load_error`, startup vs mission `error.log`, corrupt `.npy`, invalid refs | Not started |
 | HLD — orchestration / I/O | `SimulationManager`, factory, `SimulationRunImpl`, CLI, error logging, YAML flow, missing-input handling | Not started |
 | Bug-isolation — A-owned suites | Break factory/manager/CLI/config/MockLidar; confirm B prefixes still pass | Not started |
@@ -211,8 +215,9 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 
 | Task | Files / notes | Status |
 |------|---------------|--------|
-| Integration test — real algorithm | `tests/integration/` · filter `Integration.*` · use `tests/data/configs/sim_benchmark.yaml` + `benchmark_map.npy` (instructor-provided scenario, 29×30×31); must complete **≤1 min with and without injected bugs** (Review Guideline) · also cover ex1-ported maps (`scenarios/composition_scenarioN.yaml`) | Not started |
-| Integration test — mock `IMappingAlgorithm` | GMock algorithm wired through factory/run | Not started |
+| Integration test — real algorithm | `tests/integration/` · `sim_benchmark.yaml` + `benchmark_map.npy` · scenarios 3–5 | Done — PR #26 |
+| Integration test — mock `IMappingAlgorithm` | GMock algorithm wired through factory/run | Done — PR #26 |
+| CI — integration split target | `ctest -L integration` | Done — PR #26 |
 | HLD — runtime / algorithm | Mission loop, `DroneControlImpl::step`, `MappingAlgorithmImpl`, `MapsComparison` | Not started |
 | Bug-isolation — B-owned suites | Break drone/mission/algorithm/comparison; confirm A prefixes still pass | Not started |
 
@@ -220,12 +225,12 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 
 | Task | Owner | Deliverable                                                                                                                      |
 |------|-------|----------------------------------------------------------------------------------------------------------------------------------|
-| Run `pre-submission-review` skill checklist | Both | All boxes checked                                                                                                                |
-| Gate C verification | Both | All 8 filters + `Integration.*` green on `drone_mapper_simulation_test`                                                          |
-| ex1 anti-patterns review | Both | Walk `docs/ex1-mistakes.md` on owned code before submission                                                                      |
+| Run `pre-submission-review` skill checklist | Both | All boxes checked |
+| Gate C verification | Both | Full `./drone_mapper_simulation_test` green; all 8 filters + `Integration.*`; invalid config / b06; integration ≤1 min |
+| ex1 anti-patterns review | Both | Walk `docs/ex1-mistakes.md` on owned code before submission |
 | Bug-catch readiness (Review Guideline) | Both | Per-component suites cover enough behaviors to catch >50% of injected bugs; integration scenarios also exercise end-to-end paths |
 
-**Gate C:** `./drone_mapper_simulation_test` all green; all 8 component prefixes + `Integration.*` work; invalid config exits gracefully; missing files handled (b06 on `main`); integration suite completes ≤1 min with and without injected bugs (benchmark_map.npy scenario).
+**Gate C:** `./drone_mapper_simulation_test` all green; all 8 component prefixes + `Integration.*` work from the umbrella binary; invalid config exits gracefully; missing files handled (b06 on `main`); integration suite completes ≤1 min with and without injected bugs (`benchmark_map.npy` scenario). **Test harness done; joint verification + docs still open.**
 
 ---
 
@@ -251,7 +256,7 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 
 - [x] Exact component names; frozen interfaces unchanged
 - [x] `drone_mapper_simulation` CLI behavior per assignment
-- [ ] `drone_mapper_simulation_test` with all required `--gtest_filter` prefixes
+- [x] `drone_mapper_simulation_test` with all required `--gtest_filter` prefixes (umbrella binary; all sources wired; CI split + umbrella smoke)
 - [x] `simulation_output.yaml` + `output_results/` documented in `readme.txt`
 - [x] Immediate error logging; score -1 on failed continuable scenarios
 - [ ] No ex1 anti-patterns (`docs/ex1-mistakes.md`)
@@ -262,7 +267,7 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 
 | Risk | Mitigation |
 |------|------------|
-| Late test harness | Create `tests/` + CMake in Phase 1, not Phase 4 · **A:** umbrella `drone_mapper_simulation_test` in Phase 4 |
+| Late test harness | ~~Create `tests/` + CMake in Phase 1~~ · umbrella `drone_mapper_simulation_test` done PR #27 |
 | `.npy` bugs | Golden tests on `data_maps/` first |
 | Test timeout (b05s) | Algorithm is fine; risk is map size in tests — use small/synthetic maps; enforce ~10 s per component test |
 | Instructor integration scenarios too slow | Dry-run instructor config/map files locally before submission; enforce ≤1 min per integration test (with and without bugs) |
