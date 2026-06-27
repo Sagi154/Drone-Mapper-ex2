@@ -444,7 +444,7 @@ Each A-owned GTest suite is scoped to orchestration, I/O, or sensor mock behavio
 | `SimulationCliTest.*` | default composition path wrong; explicit paths not honored; missing composition file parse failure not detected |
 | `RunErrorLog.*` | log line format wrong; entries not flushed immediately; parent directory not created; multiple entries not appended |
 
-**Isolation guarantee:** A bug injected into `SimulationManager::run` (e.g. abort on first failure) will fail `SimulationManager.*` and `Integration.*`, but must not touch `DroneControl.*`, `MissionControl.*`, `MappingAlgorithm.*`, or `MapsComparison.*` when those suites use mock factories or avoid the manager loop. A bug in `MockLidar::traceBeam` fails only `MockLidar.*` (and integration scans) — not `DroneControl.*` movement-order tests, which use injected lidar mocks.
+**Isolation guarantee:** A bug injected into `SimulationManager::run` (e.g. abort on first failure) will fail `SimulationManager.*` and `Integration.*`, but must not touch `DroneControl.*`, `MissionControl.*`, `MappingAlgorithm.*`, or `MapsComparison.*` when those suites use mock factories or avoid the manager loop. A bug in `MockLidar::traceBeam` fails `MockLidar.*`, scan-related `DroneControl.*` tests (which wire the real `MockLidar`, not a GMock), and `Integration.*` — but not pure movement-order or step-0 null-scan `DroneControl.*` tests that do not assert on scan distances or voxel mapping.
 
 ## Implemented Components
 
