@@ -74,3 +74,12 @@ target_compile_definitions(drone_mapper_maps_comparison_tests
         MAPS_COMPARISON_EXE="$<TARGET_FILE:maps_comparison>"
 )
 add_dependencies(drone_mapper_maps_comparison_tests maps_comparison)
+
+add_drone_mapper_test_suite(drone_mapper_integration_tests integration
+    integration/test_integration_full_flow.cpp
+)
+
+target_include_directories(drone_mapper_integration_tests
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/tests/support
+)

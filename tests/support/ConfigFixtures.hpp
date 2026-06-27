@@ -7,6 +7,7 @@
 #include <drone_mapper/types/SimulationTypes.h>
 
 #include <filesystem>
+#include <string>
 #include <vector>
 
 namespace drone_mapper::test_support {
@@ -92,6 +93,50 @@ private:
     if (result.ok) {
         for (types::SimulationConfigData& simulation : result.value.simulations) {
             simulation.map_filename = goldenMapPath();
+        }
+    }
+    return result;
+}
+
+[[nodiscard]] inline std::filesystem::path scenarioMapPath(int scenario) {
+#ifdef DRONE_MAPPER_SOURCE_DIR
+    return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR} / "data_maps" /
+           ("scenario_" + std::to_string(scenario) + "_map.npy");
+#else
+    return std::filesystem::path{"data_maps/scenario_" + std::to_string(scenario) + "_map.npy"};
+#endif
+}
+
+[[nodiscard]] inline std::filesystem::path scenarioCompositionPath(int scenario) {
+#ifdef DRONE_MAPPER_SOURCE_DIR
+    return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR} / "scenarios" /
+           ("composition_scenario" + std::to_string(scenario) + ".yaml");
+#else
+    return std::filesystem::path{"scenarios/composition_scenario" + std::to_string(scenario) +
+                                 ".yaml"};
+#endif
+}
+
+[[nodiscard]] inline io::ConfigParseResult<types::SimulationCompositionData> loadBenchmarkComposition(
+    io::IRunErrorLog& log) {
+    io::ConfigParseResult<types::SimulationCompositionData> result =
+        io::parseCompositionFile(configFixturePath("composition_benchmark.yaml"), log);
+    if (result.ok) {
+        for (types::SimulationConfigData& simulation : result.value.simulations) {
+            simulation.map_filename = benchmarkMapPath();
+        }
+    }
+    return result;
+}
+
+[[nodiscard]] inline io::ConfigParseResult<types::SimulationCompositionData> loadScenarioComposition(
+    int scenario,
+    io::IRunErrorLog& log) {
+    io::ConfigParseResult<types::SimulationCompositionData> result =
+        io::parseCompositionFile(scenarioCompositionPath(scenario), log);
+    if (result.ok) {
+        for (types::SimulationConfigData& simulation : result.value.simulations) {
+            simulation.map_filename = scenarioMapPath(scenario);
         }
     }
     return result;
