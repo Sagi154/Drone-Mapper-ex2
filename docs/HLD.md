@@ -313,18 +313,43 @@ The first step calls `nextStep(state, nullptr)` because no LiDAR result exists y
 ```mermaid
 sequenceDiagram
     participant Run as SimulationRunImpl
+    participant Log as RunErrorLog
     participant Mission as MissionControlImpl
     participant OutputMap as IMutableMap3D output map
     participant Drone as IDroneControl
     participant Compare as MapsComparison
 
-    Run->>Mission: runMission()
-    Note over Run: Future movement legality checks can use run-owned hidden map and movement components.
-    Note over Drone: Drone control is ready at construction;
-    Mission->>OutputMap: save(output_map_file)
-    Mission-->>Run: MissionRunResult
-    Run->>Compare: compare(hidden_map, {output_map})
-    Run-->>Run: assemble SimulationResult with score, output path, and output MapConfig
+    alt startup errors present (bad config or missing map)
+        Run-->>Run: mission_score = -1, return SimulationResult
+    else no startup errors
+        Run->>Mission: runMission()
+        Mission->>Drone: step() [loop until Completed / Error / max_steps]
+        Mission->>OutputMap: save(output_map_file)
+        Mission-->>Run: MissionRunResult {status, steps, errors}
+        Run->>Log: log each error in MissionRunResult.errors
+        alt status == Error
+            Run-->>Run: mission_score = -1, return SimulationResult
+        else status == Completed or MaxSteps
+            Run->>Compare: compare(hidden_map, {output_map})
+            Compare-->>Run: score in [0, 100]
+            Run-->>Run: assemble SimulationResult with score, output_map_config
+        end
+    end
+```
+
+## Algorithm State Machine (MappingAlgorithmImpl)
+
+`MappingAlgorithmImpl::nextStep` drives a three-phase state machine. The output map is read-only from the algorithm's perspective; the drone writes scan results into it via `DroneControlImpl`.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Scanning : first call (latest_scan == nullptr)
+    Scanning --> Planning : all orientations emitted + progress check
+    Planning --> Moving : BFS / explore / unstick path found
+    Planning --> Scanning : no frontier yet, retry scan pass (max 3 passes)
+    Planning --> [*] : no path after all passes → Finished / FinishedWithUnmappableVoxels
+    Moving --> Scanning : waypoint reached (end of path)
+    Moving --> Planning : stall detected (blocked cell added)
 ```
 
 ## Orchestration and I/O Components
@@ -363,18 +388,55 @@ Error log line format: `<ISO-8601 UTC> <ERROR_CODE> <user-facing message>`. Runt
 | Mission loop error | codes from `MissionRunResult.errors` | `mission_score: -1`; run continues |
 
 ## Current Stub Boundaries
+**Scanning phase:**
+- Builds a set of scan orientations covering a hemisphere around the current position (circle rings with angular spacing derived from lidar `z_max` and drone radius).
+- Emits one orientation per `nextStep` call.
+- After all orientations are emitted, counts newly mapped cells. If no progress after multiple passes, forces a transition to Planning even without new data.
 
-Implemented (Phase 2 runtime + orchestration):
+**Planning phase:**
+- Calls `MappingAlgorithmFrontier::findPath` — BFS through confirmed-empty cells on the output map toward the nearest unmapped frontier.
+- If no frontier is reachable directly, tries `findExplorePath` (nearest unknown neighbor ignoring passability) then `findUnstickPath` (short path out of a blocked region).
+- A retry counter (`scan_pass`) allows up to `kMaxScanPassIndex` (2) re-scans before giving up. Each retry expands the proximity sphere used to test for local unknown voxels.
+- When no path is found after all retries: returns `AlgorithmStatus::Finished` (all voxels mapped) or `AlgorithmStatus::FinishedWithUnmappableVoxels` (unknown voxels remain but are unreachable).
 
-- `DroneControlImpl::step` — movement-before-scan pipeline with `ScanResultToVoxels`.
-- `MappingAlgorithmImpl::nextStep` — scan-plan-move state machine with frontier BFS.
-- `MissionControlImpl::runMission` — loops `IDroneControl::step()` until completion, error, or `max_steps`; saves output map.
-- `SimulationRunImpl::run()` — calls `IMissionControl::runMission()`, mirrors mission `errors` to per-run `error.log` (sibling of `output_map.npy`), copies `output_map_config`, scores via `MapsComparison` on `Completed`/`MaxSteps`, returns `mission_score: -1` on startup errors or `MissionRunStatus::Error`, and sets `resolution_request_status` from `output_mapping_resolution_factor`. Startup errors are logged in `SimulationRunFactoryImpl`; mission errors are logged in `SimulationRunImpl`.
-- `SimulationManager::run()` — aggregates `SimulationManagerReport`, tracks `run_id` / `config_indices` during the cartesian product, and writes `simulation_output.yaml` via `src/io/SimulationOutputYamlWriter.cpp`.
-- `drone_mapper_simulation_main` — parses CLI args via `io::parseSimulationCliArgs`, loads composition YAML via `io::parseCompositionFile`, logs startup failures to stderr with `io::StderrErrorLog`, and returns gracefully on unreadable composition files.
-- YAML parsing and composition loading (`src/io/` — nested composition YAML expands to aligned `simulations[]`/`missions[]` pairs; `SimulationManager` zip-indexes those vectors before cartesian with drones × lidars).
-- `MapsComparison::compare` — union-of-known-cells scoring ported from ex1 `Scorer`; used by `SimulationRunImpl` and `maps_comparison` CLI.
+**Moving phase:**
+- Follows the waypoints in `current_path` by emitting rotate/advance/elevate commands toward each waypoint using `movementToward`.
+- Stall detection: if position does not change for `kMaxMovingStallTicks` (8) consecutive steps, the current waypoint cell is added to `blocked_cells` and the algorithm transitions back to Planning.
 
-Still stub or incomplete:
+## Scoring (MapsComparison)
 
-- Movement legality checks at simulation-run level (future).
+`MapsComparison::compare(origin, targets)` returns a score in [0, 100] per target map using the union-of-known-cells model ported from the ex1 `Scorer`.
+
+**Algorithm:**
+1. Enumerate every grid-centre position in the **reference** (`origin`) map's bounds at its resolution.
+2. For each position where the reference has a known occupancy (Empty, Occupied, or PotentiallyOccupied), record the quantized grid key and check whether the target map agrees at that position.
+3. Enumerate every grid-centre position in the **target** map's bounds. For each position with known occupancy that maps to a grid key not already covered by the reference, add it as an additional "total" cell.
+4. Score = `correct / total × 100`. If `total == 0`, returns `100` (trivially identical empty maps).
+
+The `maps_comparison` binary wraps this: prints the score to stdout only; on error prints `-1` to stdout and a diagnostic message to stderr.
+
+## Bug-Isolation Coverage (B-Owned Suites)
+
+Each B-owned GTest suite is scoped to a single component so that a bug injected into that component fails only its own suite (and the `Integration.*` catch-all), leaving A-owned suites green.
+
+| Suite | Key failure modes isolated |
+|-------|---------------------------|
+| `DroneControl.*` | scan-before-movement ordering bug; step-0 null-scan contract; output-map not written after scan; movement limit bypass; `state()` stale read; latest-scan not forwarded on subsequent steps |
+| `MissionControl.*` | loop-continues-after-error; max-steps off-by-one; output map not saved on error/max-steps branch; `save` failure silenced; error message dropped |
+| `MappingAlgorithm.*` | algorithm never terminates (no frontier guard); scan phase exits early; movement combined with scan in one step; `Finished` status not re-emitted after first finish; frontier BFS path wrong or absent |
+| `MapsComparison.*` | union double-counted; correct count off-by-one; target-only unknown cells scored wrong; out-of-bounds cells included; CLI stdout contains extra text beyond score; CLI exit path on missing files |
+| `Integration.*` | end-to-end wiring: factory loads map, wires all components, run produces non-error score; mock algorithm receives calls in correct order; ex1-ported scenarios complete within timeout |
+
+**Isolation guarantee:** A bug injected into `MapsComparison::compare` (e.g. wrong denominator) will fail `MapsComparison.*` and affect `SimulationRun.*` score assertions and `Integration.*`, but must not touch `DroneControl.*`, `MissionControl.*`, or `MappingAlgorithm.*` — because those suites use a `MockMapsComparison` or avoid calling `compare` directly.
+
+## Implemented Components
+
+- `DroneControlImpl::step` — movement-before-scan pipeline with `ScanResultToVoxels`; marks drone footprint empty in output map before calling algorithm.
+- `MappingAlgorithmImpl::nextStep` — Scanning → Planning → Moving state machine with BFS frontier (`MappingAlgorithmFrontier`); stall detection; multi-pass rescue scan.
+- `MissionControlImpl::runMission` — loops `IDroneControl::step()` until `DroneStepStatus::Completed`, `Error`, or `max_steps`; always saves output map on exit; returns `MissionRunResult` with status, step count, and any errors.
+- `SimulationRunImpl::run()` — short-circuits to `score: -1` on startup errors; delegates to `MissionControlImpl::runMission()`; mirrors mission errors to per-run `error.log`; scores via `MapsComparison` on `Completed`/`MaxSteps`; returns `score: -1` on `MissionRunStatus::Error`.
+- `SimulationRunFactoryImpl::create` — loads hidden `.npy` map, allocates output map at requested resolution, wires `MockGPS` / `MockMovement` / `MockLidar` / `MappingAlgorithmImpl` / `DroneControlImpl` / `MissionControlImpl` into `SimulationRunImpl`; logs and stores startup errors.
+- `SimulationManager::run()` — cartesian product over simulations × missions × drones × lidars; tracks `run_id` / `config_indices`; writes `simulation_output.yaml`.
+- `drone_mapper_simulation_main` — CLI arg parsing via `io::parseSimulationCliArgs`; composition loading via `io::parseCompositionFile`; logs startup failures to stderr; returns gracefully.
+- YAML parsers (`src/io/`) — drone, mission, lidar, simulation, and composition; nested composition expands to aligned `simulations[]`/`missions[]` pairs.
+- `MapsComparison::compare` — union-of-known-cells scoring; used by `SimulationRunImpl` and `maps_comparison` CLI.

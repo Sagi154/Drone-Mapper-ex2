@@ -1,4 +1,4 @@
-# Assignment 2 — Work Plan
+﻿# Assignment 2 — Work Plan
 
 **Deadline:** July 1, 2026, 23:30  
 **Team:** 2 people · **Repo state:** Phase 4 in progress — test harness complete; Gate C pending docs, HLD, and joint sign-off
@@ -181,7 +181,7 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 
 **Outcome:** All required GTest filters pass; HLD matches code; assignment test binary name works.
 
-**Progress:** All 8 required filter families implemented and wired into `drone_mapper_simulation_test`; CI runs split suites plus umbrella smoke for `MockLidar.*` and `Integration.*`. Remaining: `readme.txt`, HLD updates, bug-isolation audits, joint Gate C sign-off.
+**Progress:** All 8 required filter families implemented and wired into `drone_mapper_simulation_test`; CI runs split suites plus umbrella smoke for `MockLidar.*` and `Integration.*`. B-owned HLD sections and bug-isolation table done (PR #28). Remaining: `readme.txt`, A-owned HLD updates, A bug-isolation audit, joint Gate C sign-off.
 
 Phase 3 left Person A with orchestration largely done and Person B with the mandatory `Integration.*` gaps. Split Phase 4 by **component ownership**, not a 50/50 “both” bucket — shared items have explicit leads below.
 
@@ -218,8 +218,8 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 | Integration test — real algorithm | `tests/integration/` · `sim_benchmark.yaml` + `benchmark_map.npy` · scenarios 3–5 | Done — PR #26 |
 | Integration test — mock `IMappingAlgorithm` | GMock algorithm wired through factory/run | Done — PR #26 |
 | CI — integration split target | `ctest -L integration` | Done — PR #26 |
-| HLD — runtime / algorithm | Mission loop, `DroneControlImpl::step`, `MappingAlgorithmImpl`, `MapsComparison` | Not started |
-| Bug-isolation — B-owned suites | Break drone/mission/algorithm/comparison; confirm A prefixes still pass | Not started |
+| HLD — runtime / algorithm | Mission loop, `DroneControlImpl::step`, `MappingAlgorithmImpl`, `MapsComparison` | Done — PR #28 |
+| Bug-isolation — B-owned suites | Break drone/mission/algorithm/comparison; confirm A prefixes still pass | Done — PR #28 |
 
 ### Together (after individual tasks land)
 
@@ -227,7 +227,7 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 |------|-------|----------------------------------------------------------------------------------------------------------------------------------|
 | Run `pre-submission-review` skill checklist | Both | All boxes checked |
 | Gate C verification | Both | Full `./drone_mapper_simulation_test` green; all 8 filters + `Integration.*`; invalid config / b06; integration ≤1 min |
-| ex1 anti-patterns review | Both | Walk `docs/ex1-mistakes.md` on owned code before submission |
+| ex1 anti-patterns review | Both | Walk `docs/ex1-mistakes.md` on owned code before submission — B-side done (PR #28); A-side pending |
 | Bug-catch readiness (Review Guideline) | Both | Per-component suites cover enough behaviors to catch >50% of injected bugs; integration scenarios also exercise end-to-end paths |
 
 **Gate C:** `./drone_mapper_simulation_test` all green; all 8 component prefixes + `Integration.*` work from the umbrella binary; invalid config exits gracefully; missing files handled (b06 on `main`); integration suite completes ≤1 min with and without injected bugs (`benchmark_map.npy` scenario). **Test harness done; joint verification + docs still open.**
