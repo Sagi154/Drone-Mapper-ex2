@@ -25,6 +25,23 @@ function(add_drone_mapper_test_suite target_name label)
     gtest_discover_tests(${target_name} PROPERTIES LABELS "${label}")
 endfunction()
 
+set(DRONE_MAPPER_COMPONENT_TEST_SOURCES
+    components/test_yaml_config_parsers.cpp
+    components/test_run_error_log.cpp
+    components/test_simulation_cli.cpp
+    components/test_map3d_impl.cpp
+    components/test_simulation_run.cpp
+    components/test_simulation_run_factory.cpp
+    components/test_simulation_manager.cpp
+    components/test_mapping_algorithm.cpp
+    components/test_mapping_algorithm_frontier.cpp
+    components/test_drone_control.cpp
+    components/test_mission_control.cpp
+    components/test_maps_comparison.cpp
+    components/test_mock_lidar.cpp
+    integration/test_integration_full_flow.cpp
+)
+
 # Implemented component suites only — add stub files here once they contain real tests.
 add_drone_mapper_test_suite(drone_mapper_config_tests config
     components/test_yaml_config_parsers.cpp
@@ -74,6 +91,37 @@ target_compile_definitions(drone_mapper_maps_comparison_tests
         MAPS_COMPARISON_EXE="$<TARGET_FILE:maps_comparison>"
 )
 add_dependencies(drone_mapper_maps_comparison_tests maps_comparison)
+
+add_drone_mapper_test_suite(drone_mapper_lidar_tests lidar
+    components/test_mock_lidar.cpp
+)
+
+add_executable(drone_mapper_simulation_test ${DRONE_MAPPER_COMPONENT_TEST_SOURCES})
+target_link_libraries(drone_mapper_simulation_test
+    PRIVATE
+        drone_mapper
+        GTest::gtest_main
+        GTest::gmock
+)
+target_compile_definitions(drone_mapper_simulation_test
+    PRIVATE
+        DRONE_MAPPER_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+        MAPS_COMPARISON_EXE="$<TARGET_FILE:maps_comparison>"
+)
+target_compile_features(drone_mapper_simulation_test PUBLIC cxx_std_20)
+if(MSVC)
+    target_compile_options(drone_mapper_simulation_test PRIVATE /W4 /WX /utf-8)
+else()
+    target_compile_options(drone_mapper_simulation_test PRIVATE -Wall -Wextra -Werror -pedantic)
+endif()
+target_include_directories(drone_mapper_simulation_test
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_SOURCE_DIR}/tests/support
+        ${CMAKE_SOURCE_DIR}/src
+)
+add_dependencies(drone_mapper_simulation_test maps_comparison)
+gtest_discover_tests(drone_mapper_simulation_test)
 
 add_drone_mapper_test_suite(drone_mapper_integration_tests integration
     integration/test_integration_full_flow.cpp
