@@ -95,6 +95,7 @@ classDiagram
     }
 
     class SimulationRunFactoryImpl {
+        -int next_run_id_
         +create(sim, mission, drone, lidar, output_path) run
     }
 
