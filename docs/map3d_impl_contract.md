@@ -62,7 +62,7 @@ The benchmark map may also contain ClassicCube export type codes (`2`, `3`, `4`,
 - Resolution: `10 cm` per voxel (ex1 integer grid cells reinterpreted at 10 cm, same as `benchmark_map.npy`).
 - Configs: `scenarios/composition_scenarioN.yaml` (+ `sim_scenarioN.yaml`, shared drone/mission/lidar YAML in `scenarios/`).
 - Regenerate: `python scripts/convert_ex1_scenario.py <ex1_scenario_dir> data_maps/scenario_N_map.npy` (requires ex1 `map_input.txt` source).
-- Optional CI: `.github/workflows/scenario-runs.yml` (`workflow_dispatch`).
+- CI: `.github/workflows/ci.yml` (`docker-build-test` job, after unit tests).
 
 When writing `.npy` test fixtures in Python/NumPy:
 

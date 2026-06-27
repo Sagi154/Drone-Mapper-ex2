@@ -53,7 +53,7 @@ Run locally:
 ./build/drone_mapper_simulation scenarios/composition_scenario3.yaml /tmp/out3
 ```
 
-Optional CI: **Actions → Scenario runs** (`workflow_dispatch`) runs all three via Docker; see `.github/workflows/scenario-runs.yml`.
+CI: the `docker-build-test` job in `.github/workflows/ci.yml` runs all three via Docker after unit tests; scores are printed in the **Check scenario mission scores** step log.
 
 ## Build and run
 

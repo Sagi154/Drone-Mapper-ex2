@@ -54,7 +54,7 @@ Integration scenarios (including instructor-provided config/map files) must fini
 `data_maps/scenario_{3,4,5}_map.npy` — ex1 grading test maps converted to valid ex2 `.npy` inputs (layout preserved, 10 cm/voxel). Use for integration/end-to-end runs alongside the benchmark map; must finish within **1 minute**.
 
 - Compositions: `scenarios/composition_scenario3.yaml`, `composition_scenario4.yaml`, `composition_scenario5.yaml`
-- Optional manual CI: **Scenario runs** workflow (`.github/workflows/scenario-runs.yml`)
+- CI: `docker-build-test` job in `.github/workflows/ci.yml` runs all three after unit tests
 
 ## Coverage
 
