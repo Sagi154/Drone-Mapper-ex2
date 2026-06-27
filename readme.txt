@@ -27,7 +27,9 @@ is used (vcpkg x64-windows packages require it). Example (PowerShell):
 Targets:
   build/drone_mapper_simulation.exe   (or ./build/drone_mapper_simulation)
   build/maps_comparison.exe
-  build/drone_mapper_simulation_test  (added in Phase 1+)
+  build/drone_mapper_simulation_test  (single umbrella binary; required GTest filter
+    prefixes: SimulationManager.*, SimulationRun.*, MissionControl.*, DroneControl.*,
+    MappingAlgorithm.*, MapsComparison.*, MockLidar.*, Integration.*)
 
 Dependencies are declared in vcpkg.json (mp-units, yaml-cpp, tinynpy, gtest).
 
@@ -51,6 +53,37 @@ Maps comparison utility:
 
   - stdout: score only (0.0–100.0 float)
   - on error: stdout prints -1, descriptive message on stderr
+
+================================================================================
+ERROR HANDLING
+================================================================================
+
+Failures are handled at two levels: program startup (composition load) and
+per-run execution (factory startup or mission loop).
+
+Program startup failure
+  - Trigger: composition YAML missing or unparseable
+  - Behavior: errors logged to stderr via StderrErrorLog; main returns 1
+  - Output: no simulation_output.yaml and no output_results/ are written
+
+Per-run startup failure
+  - Trigger: config_load_error on any simulation/mission/drone/lidar config, or
+    MAP_FILE_NOT_FOUND when the hidden .npy map is missing or corrupt
+  - Behavior: errors logged immediately to the run's error.log; mission_score
+    is -1 in simulation_output.yaml; simulation continues with the next run
+  - Output: run folder and error.log are still created
+
+Per-run mission failure
+  - Trigger: MissionRunStatus::Error during the step loop
+  - Behavior: same as per-run startup failure (score -1, error.log written,
+    simulation continues)
+
+Corrupt .npy
+  - Treated the same as a missing map file: MAP_FILE_NOT_FOUND, score -1,
+    run continues
+
+See OUTPUT LAYOUT below for run folder layout, error.log format, and failed
+continuable scenario details.
 
 ================================================================================
 OUTPUT LAYOUT
