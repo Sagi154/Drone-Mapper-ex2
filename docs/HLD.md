@@ -327,6 +327,41 @@ sequenceDiagram
     Run-->>Run: assemble SimulationResult with score, output path, and output MapConfig
 ```
 
+## Orchestration and I/O Components
+
+### SimulationManager
+
+`SimulationManager::run()` expands the composition cartesian product in loop order: `simulations × missions × drones × lidars`. For each combination it calls `ISimulationRunFactory::create(...)`, executes `ISimulationRun::run()`, and collects a `types::SimulationResult`. It tracks a 1-based `run_id` and the four `config_indices` used for each run. After all runs complete it assembles `types::SimulationManagerReport` (timestamp, metric, score range, error score) and writes `simulation_output.yaml` via `io::writeSimulationOutputYaml`.
+
+### SimulationRunFactoryImpl
+
+Each `create(...)` call assigns the next `run_id` from `next_run_id_`, creates `output_results/run_NNNN/` via `io::runOutputDir`, and opens the per-run `error.log` via `io::runErrorLog`. It calls `appendConfigLoadErrors` for all four config types (simulation, mission, drone, lidar) and logs any parse errors immediately. When the simulation config is valid it calls `loadHiddenMap`, which returns `MAP_FILE_NOT_FOUND` on a missing or corrupt `.npy`. It wires the full DI graph: `MockGPS` → `MockMovement` + `MockLidar` → `MappingAlgorithmImpl` → `DroneControlImpl` → `MissionControlImpl`, then transfers ownership into `SimulationRunImpl` along with configs, the output map path, and any startup errors.
+
+### SimulationRunImpl
+
+Two execution paths. If startup errors are present, `run()` returns immediately with `mission_score: -1` and a `MissionRunResult` in `Error` status — no mission loop runs. Otherwise it calls `mission_control_->runMission()`, mirrors mission errors to the per-run `error.log` via `logMissionErrors`, copies `output_map_config` from the output map, and scores via `MapsComparison::compare` when the mission completes or hits `max_steps`. On `MissionRunStatus::Error` it returns `mission_score: -1`. `resolution_request_status` is derived from `output_mapping_resolution_factor`.
+
+### CLI / main
+
+`drone_mapper_simulation_main.cpp` parses CLI args via `io::parseSimulationCliArgs` (composition YAML path and output path, with CWD defaults). It loads the composition via `io::parseCompositionFile` using `io::StderrErrorLog`. On parse failure it logs errors to stderr and returns 1 without writing output files. On success it constructs `SimulationRunFactoryImpl`, runs `SimulationManager::run(...)`, and prints the run count to stdout.
+
+### Error Logger / I/O
+
+- `io::RunErrorLog` — per-run file at `output_results/run_NNNN/error.log`; each `log()` call writes one line and flushes immediately.
+- `io::StderrErrorLog` — composition-level errors (missing or unparseable composition YAML); also immediate flush.
+- `io::RunPathHelpers` — shared path helpers: `runOutputDir`, `runOutputMap`, `runErrorLog`.
+
+Error log line format: `<ISO-8601 UTC> <ERROR_CODE> <user-facing message>`. Runtime codes only — not rubric codes like `e05` or `b06`.
+
+### Missing-input handling
+
+| Failure | Error code | Outcome |
+|---------|-----------|---------|
+| Composition YAML missing/unparseable | (stderr, no runtime code) | `main` returns 1; no output files |
+| Individual config YAML parse error | `config_load_error.code` from parsed config | `mission_score: -1`; run continues |
+| Hidden map missing or corrupt `.npy` | `MAP_FILE_NOT_FOUND` | `mission_score: -1`; run continues |
+| Mission loop error | codes from `MissionRunResult.errors` | `mission_score: -1`; run continues |
+
 ## Current Stub Boundaries
 
 Implemented (Phase 2 runtime + orchestration):
