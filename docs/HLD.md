@@ -378,6 +378,20 @@ stateDiagram-v2
 
 The `maps_comparison` binary wraps this: prints the score to stdout only; on error prints `-1` to stdout and a diagnostic message to stderr.
 
+## Bug-Isolation Coverage (B-Owned Suites)
+
+Each B-owned GTest suite is scoped to a single component so that a bug injected into that component fails only its own suite (and the `Integration.*` catch-all), leaving A-owned suites green.
+
+| Suite | Key failure modes isolated |
+|-------|---------------------------|
+| `DroneControl.*` | scan-before-movement ordering bug; step-0 null-scan contract; output-map not written after scan; movement limit bypass; `state()` stale read; latest-scan not forwarded on subsequent steps |
+| `MissionControl.*` | loop-continues-after-error; max-steps off-by-one; output map not saved on error/max-steps branch; `save` failure silenced; error message dropped |
+| `MappingAlgorithm.*` | algorithm never terminates (no frontier guard); scan phase exits early; movement combined with scan in one step; `Finished` status not re-emitted after first finish; frontier BFS path wrong or absent |
+| `MapsComparison.*` | union double-counted; correct count off-by-one; target-only unknown cells scored wrong; out-of-bounds cells included; CLI stdout contains extra text beyond score; CLI exit path on missing files |
+| `Integration.*` | end-to-end wiring: factory loads map, wires all components, run produces non-error score; mock algorithm receives calls in correct order; ex1-ported scenarios complete within timeout |
+
+**Isolation guarantee:** A bug injected into `MapsComparison::compare` (e.g. wrong denominator) will fail `MapsComparison.*` and affect `SimulationRun.*` score assertions and `Integration.*`, but must not touch `DroneControl.*`, `MissionControl.*`, or `MappingAlgorithm.*` — because those suites use a `MockMapsComparison` or avoid calling `compare` directly.
+
 ## Implemented Components
 
 - `DroneControlImpl::step` — movement-before-scan pipeline with `ScanResultToVoxels`; marks drone footprint empty in output map before calling algorithm.
