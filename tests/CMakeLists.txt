@@ -74,3 +74,7 @@ target_compile_definitions(drone_mapper_maps_comparison_tests
         MAPS_COMPARISON_EXE="$<TARGET_FILE:maps_comparison>"
 )
 add_dependencies(drone_mapper_maps_comparison_tests maps_comparison)
+
+add_drone_mapper_test_suite(drone_mapper_lidar_tests lidar
+    components/test_mock_lidar.cpp
+)
