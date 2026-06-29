@@ -74,13 +74,13 @@ public:
     };
 }
 
-[[nodiscard]] types::SimulationCompositionData makeComposition(std::size_t simulation_count) {
+[[nodiscard]] types::SimulationCompositionData makeComposition(std::size_t pair_count) {
     types::SimulationCompositionData composition{};
     composition.composition_file = "composition.yaml";
-    for (std::size_t index = 0; index < simulation_count; ++index) {
+    for (std::size_t index = 0; index < pair_count; ++index) {
         composition.simulations.push_back(makeSimulation(index));
+        composition.missions.push_back(makeMission());
     }
-    composition.missions.push_back(makeMission());
     composition.drones.push_back(makeDrone());
     composition.lidars.push_back(makeLidar());
     return composition;
@@ -208,6 +208,42 @@ TEST(SimulationManagerTest, Run_EmitsConfigIndicesAndRunId) {
     const YAML::Node second_run = root["score_report"]["runs"][1];
     EXPECT_EQ(second_run["run_id"].as<int>(), 2);
     EXPECT_EQ(second_run["config_indices"]["simulation"].as<std::size_t>(), 1U);
+    EXPECT_EQ(second_run["config_indices"]["mission"].as<std::size_t>(), 1U);
+
+    removeDirectory(output_path);
+}
+
+TEST(SimulationManagerTest, Run_ExpandsAlignedPairsNotIndependentCartesian) {
+    types::SimulationCompositionData composition{};
+    composition.composition_file = "composition.yaml";
+    composition.simulations.push_back(makeSimulation(0));
+    composition.simulations.push_back(makeSimulation(1));
+    composition.missions.push_back(makeMission());
+    composition.missions.push_back(makeMission());
+    composition.drones.push_back(makeDrone());
+    composition.drones.push_back(makeDrone());
+    composition.lidars.push_back(makeLidar());
+
+    auto factory = std::make_unique<SimulationRunFactoryMock>();
+    EXPECT_CALL(*factory, create(testing::_, testing::_, testing::_, testing::_, testing::_))
+        .Times(4)
+        .WillRepeatedly(testing::Invoke(
+            [](const types::SimulationConfigData&,
+               const types::MissionConfigData&,
+               const types::DroneConfigData&,
+               const types::LidarConfigData&,
+               const std::filesystem::path&) {
+                return makeRunMock(makeResult(50.0));
+            }));
+
+    const std::filesystem::path output_path =
+        std::filesystem::temp_directory_path() / "simulation_manager_pair_expansion";
+    removeDirectory(output_path);
+
+    SimulationManager manager{std::move(factory)};
+    const types::SimulationManagerReport report = manager.run(composition, output_path);
+
+    EXPECT_EQ(report.runs.size(), 4U);
 
     removeDirectory(output_path);
 }
