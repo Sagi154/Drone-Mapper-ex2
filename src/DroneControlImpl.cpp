@@ -179,6 +179,11 @@ void supplementGridAlignedScanFusion(IMutableMap3D& output_map,
     }
 }
 
+[[nodiscard]] bool isRecoverableMovementFailure(const std::string& message) {
+    return message.find("blocked") != std::string::npos ||
+           message.find("boundary") != std::string::npos;
+}
+
 } // namespace
 
 DroneControlImpl::DroneControlImpl(types::DroneConfigData drone,
@@ -221,6 +226,10 @@ types::DroneStepResult DroneControlImpl::step() {
 
         const types::MovementResult movement_result = executeMovement(movement_, *command.movement);
         if (!movement_result) {
+            if (isRecoverableMovementFailure(movement_result.message)) {
+                ++step_index_;
+                return types::DroneStepResult{types::DroneStepStatus::Continue, {}};
+            }
             return types::DroneStepResult{
                 types::DroneStepStatus::Error,
                 movement_result.message.empty() ? "Movement failed." : movement_result.message,
