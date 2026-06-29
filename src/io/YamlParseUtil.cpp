@@ -1,5 +1,7 @@
 #include "YamlParseUtil.hpp"
 
+#include <drone_mapper/types/MapTypes.h>
+
 #include <fstream>
 #include <sstream>
 
@@ -121,6 +123,32 @@ std::optional<Position3D> readMapOffset(const YAML::Node& node) {
     }
 
     return offset;
+}
+
+std::optional<types::MappingBounds> readMissionBoundaries(const YAML::Node& node) {
+    const YAML::Node boundaries = node["boundaries"];
+    if (!boundaries || !boundaries.IsMap()) {
+        return std::nullopt;
+    }
+
+    types::MappingBounds bounds{};
+    const auto read_axis = [&](const char* key, auto& min_field, auto& max_field) {
+        const YAML::Node axis = boundaries[key];
+        if (!axis || !axis.IsMap()) {
+            return;
+        }
+        if (const auto min_value = readLengthCm(axis, "min_cm")) {
+            min_field = *min_value;
+        }
+        if (const auto max_value = readLengthCm(axis, "max_cm")) {
+            max_field = *max_value;
+        }
+    };
+
+    read_axis("x_boundary", bounds.min_x, bounds.max_x);
+    read_axis("y_boundary", bounds.min_y, bounds.max_y);
+    read_axis("height_boundary", bounds.min_height, bounds.max_height);
+    return bounds;
 }
 
 } // namespace drone_mapper::io::detail

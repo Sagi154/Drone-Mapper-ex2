@@ -1,6 +1,7 @@
 #pragma once
 
 #include <drone_mapper/Units.h>
+#include <drone_mapper/types/MapTypes.h>
 
 #include <cstddef>
 #include <optional>
@@ -14,11 +15,13 @@ struct ErrorRef {
     std::string message{};
 };
 
-// Changed: boundaries were removed because map bounds now live on MapConfig/IMap3D.
 struct MissionConfigData {
     std::size_t max_steps = 0;
     PhysicalLength gps_resolution{};
     double output_mapping_resolution_factor = 0;
+    // Optional mission mapping bounds from mission_config YAML (20.6). When unset (all zero),
+    // output map boundaries fall back to the hidden map's MapConfig.
+    MappingBounds boundaries{};
     std::optional<ErrorRef> config_load_error{};
 };
 

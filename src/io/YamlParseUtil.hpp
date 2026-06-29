@@ -2,6 +2,7 @@
 
 #include <drone_mapper/Units.h>
 #include <drone_mapper/io/IRunErrorLog.h>
+#include <drone_mapper/types/MapTypes.h>
 
 #include <yaml-cpp/yaml.h>
 
@@ -27,5 +28,7 @@ void logRecoverable(IRunErrorLog& log, const std::string& code, const std::strin
 [[nodiscard]] std::optional<Position3D> readPosition3D(const YAML::Node& node);
 
 [[nodiscard]] std::optional<Position3D> readMapOffset(const YAML::Node& node);
+
+[[nodiscard]] std::optional<types::MappingBounds> readMissionBoundaries(const YAML::Node& node);
 
 } // namespace drone_mapper::io::detail

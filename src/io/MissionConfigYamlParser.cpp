@@ -19,10 +19,8 @@ types::MissionConfigData parseMissionConfig(const std::filesystem::path& path, I
 
     const YAML::Node node = detail::configRoot(*root, "mission_config");
 
-    if (node["boundaries"]) {
-        detail::logRecoverable(
-            log, "MISSION_BOUNDARIES_IGNORED",
-            "[mission_config] boundaries are ignored — map bounds come from MapConfig (9.6 refactor)");
+    if (const auto boundaries = detail::readMissionBoundaries(node)) {
+        config.boundaries = *boundaries;
     }
 
     if (const YAML::Node max_steps = node["max_steps"]; max_steps && max_steps.IsScalar()) {

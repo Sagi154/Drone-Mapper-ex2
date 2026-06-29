@@ -99,13 +99,15 @@ TEST(YamlConfigParser, MissingFileReturnsDefaultsAndLogsError) {
     EXPECT_EQ(config.config_load_error->code, "CONFIG_FILE_NOT_FOUND");
 }
 
-TEST(YamlConfigParser, MissionBoundariesAreIgnoredWithLog) {
+TEST(YamlConfigParser, MissionBoundariesAreParsed) {
     CapturingErrorLog log;
     const types::MissionConfigData config =
         io::parseMissionConfig(configFixturePath("mission_with_boundaries.yaml"), log);
 
     EXPECT_EQ(config.max_steps, 100U);
-    EXPECT_TRUE(log.containsCode("MISSION_BOUNDARIES_IGNORED"));
+    EXPECT_EQ(config.boundaries.min_x, -500.0 * x_extent[cm]);
+    EXPECT_EQ(config.boundaries.max_x, -30.0 * x_extent[cm]);
+    EXPECT_TRUE(log.entries().empty());
 }
 
 TEST(YamlConfigParser, ParsesCompositionWithAlignedSimMissionPairs) {
