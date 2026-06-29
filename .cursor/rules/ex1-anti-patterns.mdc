@@ -28,3 +28,33 @@ See `docs/ex1-mistakes.md`. Ex1 grade 76 — algorithm OK, C++ hygiene and runti
 ## Safe to reuse ideas
 
 Frontier/BFS → `MappingAlgorithmImpl::nextStep`; collision checks → `MockMovement`; scoring math → `MapsComparison`.
+
+---
+
+## ⚠️ Algorithm behavioral contract — do not "port and assume it works"
+
+The biggest porting trap is treating the algorithm as "structure ported = done." Ex1's exploration worked because **scanning, fusion, and footprint together guaranteed a passable local bubble before planning**. Each of those three things maps differently in ex2:
+
+| Ex1 behavior | Ex2 reality | What breaks if ignored |
+|---|---|---|
+| `SphericalScanner::scan()` fires full hemisphere **in one tick** before planning | One orientation per `nextStep` step — full pass spread over many steps | Adjacent cells stay `Unmapped` after a coarse pass → `isSpherePassable` fails → drone never moves |
+| `proximity_max` fusion cap (~20 cm bubble) per shot | `ScanResultToVoxels` (instructor-provided) fuses along full ray to `z_max` on miss — different semantics | Not a blocker on its own, but coverage pattern differs |
+| Footprint stamps full drone sphere as `Empty` before plan | `markDroneFootprintEmpty` with `radius < grid_resolution` stamps **only center cell** | Neighbors not cleared → movement still blocked |
+| Planning only runs after local space is proven clear | Planning runs after orientations are exhausted; `isSpherePassable` is the gate | Start position not passable → `findPath` fails → explore/unstick skipped → `FinishedWithUnmappableVoxels` with 1% mapped |
+| Rescans allowed as long as there's unknown space | `last_scan_made_progress = false` after a no-progress pass kills retry chain | Map 99% unknown, algorithm quits after 2 passes |
+
+**Symptom:** mission reports `COMPLETED` or `FinishedWithUnmappableVoxels` in ~26 steps, `mission_score ≈ 0.55`, output map has ~6 non-`Unmapped` voxels.
+
+**Not a symptom of:** bad scorer, bad map conversion, or CI failure (CI only checks `score >= 0`).
+
+## Validation rule (not optional)
+
+After any algorithm change, **always** run scenario 3 manually and inspect both score and mapped voxel count:
+
+```bash
+./build/drone_mapper_simulation scenarios/composition_scenario3.yaml /tmp/out3
+grep mission_score /tmp/out3/simulation_output.yaml
+./build/maps_comparison data_maps/scenario_3_map.npy /tmp/out3/output_results/run_0001/output_map.npy
+```
+
+A meaningful port produces a score significantly above 0 and a drone that actually traverses the map. "Tests pass" is not sufficient — tests assert `score >= 0` only.

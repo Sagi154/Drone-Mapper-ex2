@@ -32,11 +32,26 @@ description: Implements or wires a single Assignment 2 skeleton component with t
 | Component | Key behavior |
 |-----------|--------------|
 | `DroneControlImpl` | movement → scan → ScanResultToVoxels → set |
-| `MappingAlgorithmImpl` | `nextStep(state, nullptr)` on first call |
+| `MappingAlgorithmImpl` | `nextStep(state, nullptr)` on first call — **see algorithm contract below** |
 | `MissionControlImpl` | loop `drone_control.step()` until done/max_steps/error |
 | `SimulationRunFactoryImpl` | wire full object graph; set paths via `runOutputMap` / `runErrorLog` from `src/io/`; pass `run_id` from manager |
 | `SimulationManager` | cartesian product; compute `run_id`; aggregate `SimulationManagerReport`; write `simulation_output.yaml` |
 | `Map3DImpl` | `.npy` load/save; `MapConfig` boundaries/offset/resolution |
+
+## MappingAlgorithmImpl — contract that must hold
+
+The skeleton's step/`nextStep` model means one scan orientation is emitted per step. The algorithm is correct only if a full scan pass (all orientations) actually clears a **passable local bubble** before the first planning phase. Without that, `isSpherePassable` blocks movement from step 1.
+
+**Non-negotiable checks before shipping:**
+
+1. After the first scan pass completes, `isSpherePassable` at the start position must return `true` — otherwise the drone is permanently stuck.
+2. `drone.radius < grid_resolution` → footprint stamps only the center cell → **neighbors are not cleared by footprint**. The scan pass must do the work instead.
+3. Coarse pass orientation count (depends on `el_step_base` × `kCoarsePassAngularScale`) can be as low as ~6 for common configs. Verify it's enough to cover local space.
+4. `MappingAlgorithmFrontier::diagnose` bails immediately if start is not passable → explore/unstick fallback never runs. Fix passability first.
+5. `last_scan_made_progress` gates rescan retries — if pass 1 maps 0 new cells, the algorithm quits even with 99% of the map unknown.
+6. Validate by running `composition_scenario3.yaml` and checking that `mission_score` is meaningfully above 0 and the drone actually traverses the map. CI only checks `score >= 0`.
+
+See `port-from-ex1` skill for the full behavioral checklist.
 
 ## Authority
 
