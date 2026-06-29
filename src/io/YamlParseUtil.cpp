@@ -132,22 +132,31 @@ std::optional<types::MappingBounds> readMissionBoundaries(const YAML::Node& node
     }
 
     types::MappingBounds bounds{};
-    const auto read_axis = [&](const char* key, auto& min_field, auto& max_field) {
-        const YAML::Node axis = boundaries[key];
-        if (!axis || !axis.IsMap()) {
-            return;
-        }
-        if (const auto min_value = readLengthCm(axis, "min_cm")) {
-            min_field = *min_value;
-        }
-        if (const auto max_value = readLengthCm(axis, "max_cm")) {
-            max_field = *max_value;
-        }
-    };
 
-    read_axis("x_boundary", bounds.min_x, bounds.max_x);
-    read_axis("y_boundary", bounds.min_y, bounds.max_y);
-    read_axis("height_boundary", bounds.min_height, bounds.max_height);
+    if (const YAML::Node axis = boundaries["x_boundary"]; axis && axis.IsMap()) {
+        if (const auto value = readScalarDouble(axis, "min_cm")) {
+            bounds.min_x = *value * x_extent[cm];
+        }
+        if (const auto value = readScalarDouble(axis, "max_cm")) {
+            bounds.max_x = *value * x_extent[cm];
+        }
+    }
+    if (const YAML::Node axis = boundaries["y_boundary"]; axis && axis.IsMap()) {
+        if (const auto value = readScalarDouble(axis, "min_cm")) {
+            bounds.min_y = *value * y_extent[cm];
+        }
+        if (const auto value = readScalarDouble(axis, "max_cm")) {
+            bounds.max_y = *value * y_extent[cm];
+        }
+    }
+    if (const YAML::Node axis = boundaries["height_boundary"]; axis && axis.IsMap()) {
+        if (const auto value = readScalarDouble(axis, "min_cm")) {
+            bounds.min_height = *value * z_extent[cm];
+        }
+        if (const auto value = readScalarDouble(axis, "max_cm")) {
+            bounds.max_height = *value * z_extent[cm];
+        }
+    }
     return bounds;
 }
 
