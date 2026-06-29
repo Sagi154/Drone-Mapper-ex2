@@ -25,6 +25,12 @@ namespace drone_mapper {
 
 namespace {
 
+[[nodiscard]] bool isUnsetBoundaries(const types::MappingBounds& bounds) {
+    return bounds.min_x == 0.0 * x_extent[cm] && bounds.max_x == 0.0 * x_extent[cm] &&
+           bounds.min_y == 0.0 * y_extent[cm] && bounds.max_y == 0.0 * y_extent[cm] &&
+           bounds.min_height == 0.0 * z_extent[cm] && bounds.max_height == 0.0 * z_extent[cm];
+}
+
 [[nodiscard]] types::MapConfig hiddenMapConfig(const types::SimulationConfigData& simulation) {
     return types::MapConfig{
         .boundaries = {},
@@ -42,6 +48,9 @@ namespace {
                               : 1.0;
     const double hidden_cm = simulation.map_resolution.force_numerical_value_in(cm);
     config.resolution = (hidden_cm / factor) * cm;
+    if (!isUnsetBoundaries(mission.boundaries)) {
+        config.boundaries = mission.boundaries;
+    }
     return config;
 }
 

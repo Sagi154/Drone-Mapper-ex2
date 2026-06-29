@@ -10,7 +10,11 @@ description: Diagnoses Drone-Mapper-ex2 scenario failures, timeouts (b05), score
 1. Find the run folder: `output_results/run_NNNN/` (`output_map.npy`, `error.log`).
 2. Match `run_id` in `simulation_output.yaml` to folder (`run_0001` ↔ `run_id: 1`).
 3. Check `mission_score`, `mission_results[].status`, `mission_results[].errors`.
-4. Reproduce with minimal composition YAML (single simulation × single mission × single drone × single lidar).
+4. Reproduce with minimal composition YAML (one aligned pair × one drone × one lidar).
+
+## Composition expansion
+
+Nested `simulation_compositions` YAML lists `mission_configs` under each `simulation_config`. The parser expands these into aligned `simulations[]` / `missions[]` vectors. `SimulationManager` iterates **pair index × drones × lidars** — not an independent simulations × missions cartesian product. Wrong expansion produces extra runs or mismatched `config_indices`.
 
 ## Trace call stack
 

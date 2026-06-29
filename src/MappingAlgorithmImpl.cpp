@@ -7,10 +7,12 @@
 #include "MappingAlgorithmFrontier.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <numbers>
 #include <optional>
 #include <unordered_set>
+#include <utility>
 
 namespace drone_mapper {
 
@@ -116,6 +118,20 @@ std::size_t MappingAlgorithmImpl::countMappedCells() const {
 void MappingAlgorithmImpl::buildScanOrientations() {
     impl_->scan_orientations.clear();
 
+    if (impl_->scan_pass == 0) {
+        static constexpr std::array<std::pair<double, double>, 6> kAxisAligned = {{
+            {0.0, 0.0},
+            {180.0, 0.0},
+            {90.0, 0.0},
+            {270.0, 0.0},
+            {0.0, 90.0},
+            {0.0, -90.0},
+        }};
+        for (const auto& [az, el] : kAxisAligned) {
+            impl_->scan_orientations.push_back(Orientation{az * deg, el * deg});
+        }
+    }
+
     const types::MapConfig map_config = output_map_.getMapConfig();
     const double cell_cm = gridStepCm(map_config);
     const double radius_cm = drone_config_.radius.force_numerical_value_in(cm);
@@ -188,9 +204,12 @@ std::optional<types::MovementCommand> MappingAlgorithmImpl::movementToward(
         target.z.force_numerical_value_in(cm) - state.position.z.force_numerical_value_in(cm);
     if (std::abs(dh) > 1e-6) {
         const double limit = drone_config_.max_elevate.force_numerical_value_in(cm);
+        const double step_cm = gridStepCm(output_map_.getMapConfig());
+        const double step_cap = step_cm > 0.0 ? step_cm : limit;
+        const double capped = std::min(limit, step_cap);
         types::MovementCommand cmd{};
         cmd.type = types::MovementCommandType::Elevate;
-        cmd.distance = std::clamp(dh, -limit, limit) * cm;
+        cmd.distance = std::clamp(dh, -capped, capped) * cm;
         return cmd;
     }
 
@@ -226,9 +245,11 @@ std::optional<types::MovementCommand> MappingAlgorithmImpl::movementToward(
 
     const double dist_cm = std::sqrt(dx * dx + dy * dy);
     const double adv_limit = drone_config_.max_advance.force_numerical_value_in(cm);
+    const double step_cm = gridStepCm(output_map_.getMapConfig());
+    const double step_cap = step_cm > 0.0 ? step_cm : adv_limit;
     types::MovementCommand cmd{};
     cmd.type = types::MovementCommandType::Advance;
-    cmd.distance = std::min(dist_cm, adv_limit) * cm;
+    cmd.distance = std::min(dist_cm, std::min(adv_limit, step_cap)) * cm;
     return cmd;
 }
 
@@ -276,7 +297,8 @@ types::MappingStepCommand MappingAlgorithmImpl::handlePlanningPhase(const types:
             detail::hasNotMappedInSphere(output_map_, state.position, expanded_cm * cm);
         const bool mission_has_unknown = detail::hasAnyNotMappedInBounds(output_map_);
         const bool can_retry = impl_->scan_pass < kMaxScanPassIndex &&
-                               (impl_->scan_pass == 0 || impl_->last_scan_made_progress);
+                               (impl_->scan_pass == 0 || impl_->last_scan_made_progress ||
+                                mission_has_unknown);
         const bool should_rescan =
             can_retry &&
             ((impl_->scan_pass == 0 && (local_unknown_normal || mission_has_unknown)) ||

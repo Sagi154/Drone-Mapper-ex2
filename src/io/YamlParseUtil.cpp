@@ -1,5 +1,7 @@
 #include "YamlParseUtil.hpp"
 
+#include <drone_mapper/types/MapTypes.h>
+
 #include <fstream>
 #include <sstream>
 
@@ -121,6 +123,41 @@ std::optional<Position3D> readMapOffset(const YAML::Node& node) {
     }
 
     return offset;
+}
+
+std::optional<types::MappingBounds> readMissionBoundaries(const YAML::Node& node) {
+    const YAML::Node boundaries = node["boundaries"];
+    if (!boundaries || !boundaries.IsMap()) {
+        return std::nullopt;
+    }
+
+    types::MappingBounds bounds{};
+
+    if (const YAML::Node axis = boundaries["x_boundary"]; axis && axis.IsMap()) {
+        if (const auto value = readScalarDouble(axis, "min_cm")) {
+            bounds.min_x = *value * x_extent[cm];
+        }
+        if (const auto value = readScalarDouble(axis, "max_cm")) {
+            bounds.max_x = *value * x_extent[cm];
+        }
+    }
+    if (const YAML::Node axis = boundaries["y_boundary"]; axis && axis.IsMap()) {
+        if (const auto value = readScalarDouble(axis, "min_cm")) {
+            bounds.min_y = *value * y_extent[cm];
+        }
+        if (const auto value = readScalarDouble(axis, "max_cm")) {
+            bounds.max_y = *value * y_extent[cm];
+        }
+    }
+    if (const YAML::Node axis = boundaries["height_boundary"]; axis && axis.IsMap()) {
+        if (const auto value = readScalarDouble(axis, "min_cm")) {
+            bounds.min_height = *value * z_extent[cm];
+        }
+        if (const auto value = readScalarDouble(axis, "max_cm")) {
+            bounds.max_height = *value * z_extent[cm];
+        }
+    }
+    return bounds;
 }
 
 } // namespace drone_mapper::io::detail

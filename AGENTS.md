@@ -33,7 +33,7 @@ TAU Advanced Topics in Programming, Assignment 2. Course skeleton is merged at r
 | `workplan.md` | Team execution plan |
 | `readme.txt` | Build/run + **agreed output layout** (`run_NNNN`, YAML schema) |
 | `docs/map3d_impl_contract.md` | `.npy` format, world↔voxel mapping, reference maps |
-| `context/` | Original assignment and review docx files |
+| `context/` | Assignment docx (`Advanced Topics TAU 2026B - Assignment 2 (1).docx`) and review guidelines |
 
 ## Test maps
 
@@ -65,14 +65,16 @@ cmake --build --preset default
 ./build/maps_comparison <origin_map> <target_map> [comparison_config=<path>]
 ```
 
-## Grading (Review Guideline)
+## Grading (Assignment 2 + Review Guideline)
 
-Submissions are graded by **bug injection** against your test suite (`context/Exercise 2 Review Guideline.docx`):
+Submissions are graded by **bug injection** against your test suite. Thresholds from the assignment doc (`context/Advanced Topics TAU 2026B - Assignment 2 (1).docx`); the Review Guideline (`context/Exercise 2 Review Guideline.docx`) states lower bars for reference.
 
-- **>50%** of injected bugs caught per component = full marks; **>25%** = partial marks.
+- **≥60%** of injected bugs caught per component test suite (assignment); Review Guideline cites >50% full / >25% partial.
+- **≥20%** of injected bugs caught by integration tests (assignment).
 - Isolate tests per component where possible; some bugs may legitimately fail multiple suites.
 - Integration tests use instructor-provided config/map files; must finish within **1 minute** (with and without bugs).
 - Manual code review is lighter than ex1 — comments in most cases; only extremely poor practices affect the grade.
+- **Submission deadline:** July 5, 2026, 23:30.
 
 ## Hard rules
 
@@ -80,7 +82,7 @@ Submissions are graded by **bug injection** against your test suite (`context/Ex
 - **Never** reimplement `MockLidar` or `ScanResultToVoxels`.
 - **Never** use `exit()` / `abort()`; return from `main` gracefully.
 - **Never** unwrap mp-units to `double` for math; use quantity arithmetic.
-- Ex1 (`../Drone-Mapper/`) is **logic reference only** — on conflict, Assignment 2 + Review Guideline win.
+- Ex1 (`../Drone-Mapper/`) is **logic reference only** — on conflict, Assignment 2 docx wins over Review Guideline.
 - Log all errors **immediately** to the per-run error log; never defer (do not port ex1 `flushIfNeeded`).
 - **Rubric codes** (`e05`, `b04`, …) ≠ **runtime codes** (`ErrorRef::code` in YAML) — see `docs/review-error-codes.md`.
 - One failed scenario → `score: -1` and continue; do not abort the whole composition unless startup is impossible.

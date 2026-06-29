@@ -28,11 +28,12 @@ TEST(IntegrationTest, FullFlowWithRealAlgorithm) { ... }       // Integration.*
 
 ## Isolation (grading)
 
-Per Review Guideline — instructors inject bugs and run your suite per component:
+Per assignment doc — instructors inject bugs and run your suite per component:
 
 - Mock only **direct** dependencies via GMock interfaces.
 - Do not include unrelated component internals in assertions.
-- Bug in component X should be caught by X's tests (>50% for full marks, >25% for partial).
+- Bug in component X should be caught by X's tests (≥60% per assignment; Review Guideline cites >50% full / >25% partial).
+- Integration tests should catch ≥20% of injected bugs (assignment).
 - A destructive bug may fail multiple suites — still isolate where possible.
 
 ## MockLidar

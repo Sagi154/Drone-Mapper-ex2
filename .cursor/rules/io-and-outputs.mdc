@@ -10,7 +10,7 @@ alwaysApply: false
 
 - Configs: YAML (`drone_config`, `mission_config`, `lidar_config`, `simulation_config`, compositions)
 - Maps: `.npy` binary voxel arrays
-- Composition expands: simulations × missions × drones × lidars
+- Composition expands: aligned **(simulation, mission) pairs** × `drone_configs` × `lidar_configs` (nested YAML parsed into equal-length `simulations[]` / `missions[]` vectors)
 
 ## Outputs (in `output_path` or CWD)
 
@@ -27,7 +27,7 @@ Authoritative spec: **`readme.txt`** (OUTPUT LAYOUT + simulation_output.yaml sec
       ...
 ```
 
-- **`run_NNNN`**: zero-padded 4-digit, **1-based** `run_id`; one folder per cartesian-product tuple in `SimulationManager` loop order (simulations × missions × drones × lidars).
+- **`run_NNNN`**: zero-padded 4-digit, **1-based** `run_id`; one folder per tuple in loop order: **pairs × drones × lidars**.
 - **`run_id` formula** and examples — see `readme.txt`.
 - **Path helpers** (shared by `SimulationRunFactoryImpl` and `SimulationManager`): `runOutputDir`, `runOutputMap`, `runErrorLog` — implement in `src/io/`; do not hardcode paths in components.
 - **`simulation_output.yaml`**: top-level `score_report`; each run lists `run_id`, `run_dir`, `output_map_file`, `error_log_file`, `config_indices`, `mission_score`.

@@ -17,8 +17,8 @@ Headers marked **"Do not change this interface"** are immutable (e18).
 ## IMap3D / IMutableMap3D
 
 - `atVoxel(pos)`, `getMapConfig()`, `isInBounds(pos)`.
-- `MapConfig` bundles boundaries + offset + resolution.
-- `MissionConfigData` does **not** own boundaries (9.6).
+- `MapConfig` bundles boundaries + offset + resolution on `IMap3D`.
+- `MissionConfigData` may include optional `boundaries` from `mission_config` YAML (20.6); when set, they define the output map bounds; when unset, output map inherits hidden-map bounds.
 
 ## DroneControlImpl::step()
 
