@@ -39,6 +39,7 @@ using NiceMapMock = testing::NiceMock<MapMock>;
 class LidarMock : public ILidar {
 public:
     MOCK_METHOD(types::LidarScanResult, scan, (Orientation scan_orientation), (const, override));
+    MOCK_METHOD(types::LidarConfigData, config, (), (const, override));
 };
 
 class DroneControlMock : public IDroneControl {
