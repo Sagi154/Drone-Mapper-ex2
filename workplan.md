@@ -132,7 +132,7 @@ Day:  0    1    2    3    4    5    6    7    8    9   10   11   12
 
 ## Phase 3 — Orchestration (Days 4–8) ✅ DONE
 
-**Outcome:** Full composition cartesian product; CLI; report files.  
+**Outcome:** Full composition pair expansion; CLI; report files.  
 **Starts while Phase 2 runtime is still landing** — factory starts as single-scenario stub, then generalizes.
 
 **Gate B verified on `main`** — happy path, bad-map `-1`, continue-after-failure, and mid-mission `error.log` mirroring all pass in CI and manual smoke.
@@ -145,7 +145,7 @@ Work landed while Phase 2 runtime was still merging — mapped back to Phase 3 t
 |--------------|--------------------------|-------|
 | `SimulationRunFactoryImpl` — full DI graph | Started as minimal stub; grew to full wiring (hidden map load, mocks, algorithm, drone/mission control) | `main` |
 | `SimulationRunImpl` — mission + compare + `SimulationResult` | `run()` calls `runMission`, scores via `MapsComparison`, `-1` on errors | `main` |
-| `SimulationManager` — cartesian product + report | Loop + `simulation_output.yaml` writer | `main` |
+| `SimulationManager` — pair expansion + report | Loop + `simulation_output.yaml` writer | `main` |
 | `drone_mapper_simulation_main` — CLI | `parseSimulationCliArgs`, `parseCompositionFile`, stderr on startup failure | `main` |
 | `output_results/` layout + path helpers | `runOutputDir` / `runOutputMap` / `runErrorLog` in `readme.txt` + `src/io/` | `main` |
 | Test fixtures (parsed YAML + `.npy`) | `ConfigFixtures.hpp`, `composition_e2e.yaml`, factory + manager E2E tests | `main` |
@@ -228,7 +228,7 @@ Phase 3 left Person A with orchestration largely done and Person B with the mand
 | Run `pre-submission-review` skill checklist | Both | All boxes checked |
 | Gate C verification | Both | Full `./drone_mapper_simulation_test` green; all 8 filters + `Integration.*`; invalid config / b06; integration ≤1 min |
 | ex1 anti-patterns review | Both | Walk `docs/ex1-mistakes.md` on owned code before submission — B-side done (PR #28); A-side pending |
-| Bug-catch readiness (Review Guideline) | Both | Per-component suites cover enough behaviors to catch >50% of injected bugs; integration scenarios also exercise end-to-end paths |
+| Bug-catch readiness (assignment) | Both | Per-component suites target ≥60% injected bugs; integration tests ≥20% (Review Guideline cites >50% / >25% for components) |
 
 **Gate C:** `./drone_mapper_simulation_test` all green; all 8 component prefixes + `Integration.*` work from the umbrella binary; invalid config exits gracefully; missing files handled (b06 on `main`); integration suite completes ≤1 min with and without injected bugs (`benchmark_map.npy` scenario). **Docs complete; joint verification still open.**
 

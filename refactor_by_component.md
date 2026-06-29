@@ -40,7 +40,7 @@ Maps each ex2 component to its skeleton location, ex1 reference, and implementat
 | `MapsComparison` | `MapsComparison.h/cpp`, `maps_comparison_main.cpp` | `Scorer.*` | 70% | Stub | Scoring math from ex1; ex2 `IMap3D` + optional comparison YAML. CLI: stdout score only. | 100 / ~100 / ~0 behavior |
 | `SimulationRunImpl` | `SimulationRunImpl.h/cpp` | ex1 result assembly | 30% | Stub | Run mission → compare maps → assemble `SimulationResult`. | Complete result per run |
 | `SimulationRunFactoryImpl` | `SimulationRunFactoryImpl.h/cpp` | ex1 DI in `main` | 30% | Stub | Wire object graph per scenario tuple; load hidden `.npy`. | Runnable `ISimulationRun` per combo |
-| `SimulationManager` | `SimulationManager.h/cpp` | (new) | 20% | Stub | Cartesian product; build `SimulationManagerReport`; write `simulation_output.yaml`. | All composition runs aggregated |
+| `SimulationManager` | `SimulationManager.h/cpp` | (new) | ~20% | Stub | Nested composition → aligned pairs; pairs × drones × lidars; build `SimulationManagerReport`; write `simulation_output.yaml`. | All composition runs aggregated |
 | `drone_mapper_simulation_main` | `drone_mapper_simulation_main.cpp` | ex1 `main.cpp` | 25% | Stub | Load composition YAML; path rules; delegate to manager; write `output_results/`. | CLI matches assignment |
 | YAML parsing | *to create* e.g. `src/io/` | `DroneConfigParser`, `MissionConfigParser` | 50% | **New** | Validation spirit from ex1; YAML format; immediate error logging. Link `yaml-cpp` in CMake. | All config types + composition parse |
 | Error logging | *to create* e.g. `src/io/` | ex1 `ErrorLogger` | 20% | **New** | **No** `lines()` getter (e22m). Structured `ErrorRef`; flush immediately. | Errors logged at occurrence |

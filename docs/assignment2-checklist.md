@@ -1,6 +1,8 @@
 # Assignment 2 — Mandatory Checklist
 
-Condensed from `context/Advanced Topics TAU 2026B - Assignment 2.docx`. On conflict, the docx wins.
+Condensed from `context/Advanced Topics TAU 2026B - Assignment 2 (1).docx`. On conflict, the docx wins.
+
+**Submission deadline:** July 5, 2026, 23:30.
 
 ## Components (exact names, all mandatory)
 
@@ -14,11 +16,11 @@ Condensed from `context/Advanced Topics TAU 2026B - Assignment 2.docx`. On confl
 
 - Maps: `.npy` binary (NumPy voxel format)
 - Configs: YAML — `drone_config`, `mission_config`, `lidar_config`, `simulation_config`, `simulation_compositions`, optional `comparison_config`
-- Composition: cartesian product of simulations × mission_configs × drone_configs × lidar_configs
+- Composition: nested YAML — each `simulations[]` entry has its own `mission_configs[]`; parser expands to aligned `(simulation, mission)` pairs, then runs = **pairs × drone_configs × lidar_configs**
 
 ## Outputs
 
-- `simulation_output.yaml` — hierarchical score report (see assignment example)
+- `simulation_output.yaml` — score report (hierarchical example in assignment; our agreed flat `runs[]` layout is in `readme.txt`)
 - `output_results/` — maps and error logs (document layout in `readme.txt`)
 - Per-run error log — all errors logged **immediately** when they occur
 
@@ -49,6 +51,7 @@ Condensed from `context/Advanced Topics TAU 2026B - Assignment 2.docx`. On confl
 - Component tests: `tests/components/` — SimulationManager, SimulationRun (+ MockGPS/MockMovement), MissionControl, DroneControl, MappingAlgorithm, MockLidar, MapsComparison
 - Integration: `tests/integration/` — at least 2 (real algorithm + mock algorithm)
 - Run: `./drone_mapper_simulation_test` with required `--gtest_filter` prefixes
+- Bug injection (assignment): **≥60%** per component suite; **≥20%** via integration tests (Review Guideline cites >50% / >25% for components)
 
 ## Error handling (ex1 + ex2)
 
@@ -63,7 +66,7 @@ Condensed from `context/Advanced Topics TAU 2026B - Assignment 2.docx`. On confl
 
 - Use exact skeleton interfaces and types — no deviation
 - `IMappingAlgorithm::nextStep(state, latest_scan)` — `latest_scan` may be `nullptr` on first step
-- `MapConfig` (boundaries, offset, resolution) on `IMap3D`; `MissionConfigData` has no boundaries
+- `MapConfig` (boundaries, offset, resolution) on `IMap3D`; `MissionConfigData` may include optional `boundaries` from `mission_config` YAML (20.6) — applied to output map when set
 - `DroneControlImpl::step()`: movement first, then scan, voxels via `ScanResultToVoxels`
 
 ## Performance

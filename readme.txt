@@ -37,7 +37,7 @@ Dependencies are declared in vcpkg.json (mp-units, yaml-cpp, tinynpy, gtest).
 RUN
 ================================================================================
 
-Simulation (composition cartesian product):
+Simulation (nested composition → aligned pairs × drones × lidars):
 
   ./build/drone_mapper_simulation [<simulation.yaml>] [<output_path>]
 
@@ -104,23 +104,23 @@ All artifacts are written under <output_path> (defaults to CWD).
 
 Run folder naming
   - run_NNNN: zero-padded 4-digit, 1-based index (0001, 0002, …)
-  - One folder per cartesian-product combination, in SimulationManager loop order:
-      simulations × missions × drones × lidars
+  - One folder per combination, in SimulationManager loop order:
+      (simulation, mission) pairs × drones × lidars
 
 Run index (1-based run_id)
-  run_id = 1 + sim_i * (M * D * L)
-              + mis_j * (D * L)
+  run_id = 1 + pair_i * (D * L)
               + drn_k * L
               + lid_m
 
-  Where sim_i, mis_j, drn_k, lid_m are 0-based indices into composition vectors,
-  and M, D, L are the sizes of missions, drones, and lidars respectively.
+  Where pair_i is the 0-based index into the aligned simulations[]/missions[] vectors
+  (equal length; one entry per nested simulation+mission pair from composition YAML),
+  and D, L are the sizes of drones and lidars respectively.
 
-  Examples (2 simulations, 1 mission, 1 drone, 2 lidars):
-    run_0001  simulations[0], missions[0], drones[0], lidars[0]
-    run_0002  simulations[0], missions[0], drones[0], lidars[1]
-    run_0003  simulations[1], missions[0], drones[0], lidars[0]
-    run_0004  simulations[1], missions[0], drones[0], lidars[1]
+  Examples (2 pairs, 1 drone, 2 lidars):
+    run_0001  pairs[0], drones[0], lidars[0]
+    run_0002  pairs[0], drones[0], lidars[1]
+    run_0003  pairs[1], drones[0], lidars[0]
+    run_0004  pairs[1], drones[0], lidars[1]
 
 Per-run files
   - output_map.npy  — final voxel map written by MissionControlImpl (NumPy format)
@@ -187,5 +187,5 @@ Mapping to code types
   - score_report     <- SimulationManagerReport
   - runs[]           <- SimulationManagerReport.runs (SimulationResult)
   - mission_results  <- SimulationResult.mission_results (MissionRunResult)
-  - config_indices   <- indices used when expanding the cartesian product
+  - config_indices   <- pair index (same for simulation and mission) plus drone/lidar indices
   - run_id           <- 1-based; must match run_NNNN folder name

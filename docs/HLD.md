@@ -4,7 +4,7 @@ This document describes the implemented Assignment 2 design. Orchestration, runt
 
 ## Main Components
 
-- `SimulationManager` is the top-level runner. It receives `types::SimulationCompositionData`, expands the cartesian product, and aggregates a `types::SimulationManagerReport`.
+- `SimulationManager` is the top-level runner. It receives `types::SimulationCompositionData`, expands aligned (simulation, mission) pairs × drones × lidars, and aggregates a `types::SimulationManagerReport`.
 - `ISimulationRunFactory` is the single construction seam. It creates one fully wired run node for one simulation/mission/drone/LiDAR combination.
 - `SimulationRunImpl` owns the full per-node runtime object graph, including maps, hardware-like components, drone control, and mission control. It also carries the simulation/mission config and output map path needed to return `types::SimulationResult`.
 - `MissionControlImpl` receives references to the simulation-run-owned maps and drone control, saves the output map, and returns mission-level status/errors.
@@ -16,7 +16,7 @@ This document describes the implemented Assignment 2 design. Orchestration, runt
 
 - `types::MapConfig` is the canonical map-geometry bundle: `MappingBounds`, `Position3D offset`, and `PhysicalLength resolution`.
 - `types::SimulationConfigData` provides the hidden map file, hidden map resolution, map offset, initial drone position, and initial heading.
-- `types::MissionConfigData` no longer owns mapping boundaries. Mission configuration is limited to mission behavior and requested output resolution parameters.
+- `types::MissionConfigData` holds mission behavior, optional mapping `boundaries` from `mission_config` YAML (20.6), and requested output resolution parameters. When boundaries are unset, the output map inherits hidden-map bounds.
 - `types::MissionRunResult` contains mission status, step count, and mission-level errors.
 - `types::SimulationResult` contains one run's configs, mission results, output map file, output map config, resolution request status, and final score.
 - `types::SimulationManagerReport` is the top-level aggregate over all generated `SimulationResult` runs.
@@ -374,7 +374,7 @@ stateDiagram-v2
 
 ### SimulationManager
 
-`SimulationManager::run()` expands the composition cartesian product in loop order: `simulations × missions × drones × lidars`. For each combination it calls `ISimulationRunFactory::create(...)`, executes `ISimulationRun::run()`, and collects a `types::SimulationResult`. It tracks a 1-based `run_id` and the four `config_indices` used for each run. After all runs complete it assembles `types::SimulationManagerReport` (timestamp, metric, score range, error score) and writes `simulation_output.yaml` via `io::writeSimulationOutputYaml`.
+`SimulationManager::run()` expands aligned (simulation, mission) pairs × drones × lidars in loop order. For each combination it calls `ISimulationRunFactory::create(...)`, executes `ISimulationRun::run()`, and collects a `types::SimulationResult`. It tracks a 1-based `run_id` and `config_indices` (pair index for both simulation and mission, plus drone/lidar indices). After all runs complete it assembles `types::SimulationManagerReport` (timestamp, metric, score range, error score) and writes `simulation_output.yaml` via `io::writeSimulationOutputYaml`.
 
 ### SimulationRunFactoryImpl
 
@@ -437,7 +437,7 @@ Each A-owned GTest suite is scoped to orchestration, I/O, or sensor mock behavio
 
 | Suite | Key failure modes isolated |
 |-------|---------------------------|
-| `SimulationManager.*` | cartesian product skips combinations; failed run aborts whole composition; `run_id` / `config_indices` mismatch; `simulation_output.yaml` missing or wrong schema; report metadata (`generated_at_utc`, `metric`, `error_score`) wrong; invalid composition ref not scored -1 |
+| `SimulationManager.*` | pair expansion skips combinations or over-expands (independent sim×mission cartesian); failed run aborts whole composition; `run_id` / `config_indices` mismatch; `simulation_output.yaml` missing or wrong schema; report metadata (`generated_at_utc`, `metric`, `error_score`) wrong; invalid composition ref not scored -1 |
 | `SimulationRun.*` | factory output layout wrong (`run_NNNN/` paths); hidden map not loaded from disk; missing/corrupt `.npy` not logged or not scored -1; invalid per-config YAML not scored -1; startup errors do not skip mission; mission errors not mirrored to `error.log`; `mission_score: -1` on error; max-steps run not scored |
 | `MockLidar.*` | open-beam miss returns wrong length (not max-range cm); obstacle at `z_max` not detected; obstacle one voxel before max not detected; obstacle beyond max falsely detected; obstacle before `z_min` returns non-zero; zero `fov_circles` returns non-empty scan |
 | `YamlConfigParser.*` | config fields not parsed; missing file does not set `config_load_error`; composition mis-aligns simulations/missions; missing composition file not reported |
@@ -453,7 +453,7 @@ Each A-owned GTest suite is scoped to orchestration, I/O, or sensor mock behavio
 - `MissionControlImpl::runMission` — loops `IDroneControl::step()` until `DroneStepStatus::Completed`, `Error`, or `max_steps`; always saves output map on exit; returns `MissionRunResult` with status, step count, and any errors.
 - `SimulationRunImpl::run()` — short-circuits to `score: -1` on startup errors; delegates to `MissionControlImpl::runMission()`; mirrors mission errors to per-run `error.log`; scores via `MapsComparison` on `Completed`/`MaxSteps`; returns `score: -1` on `MissionRunStatus::Error`.
 - `SimulationRunFactoryImpl::create` — loads hidden `.npy` map, allocates output map at requested resolution, wires `MockGPS` / `MockMovement` / `MockLidar` / `MappingAlgorithmImpl` / `DroneControlImpl` / `MissionControlImpl` into `SimulationRunImpl`; logs and stores startup errors.
-- `SimulationManager::run()` — cartesian product over simulations × missions × drones × lidars; tracks `run_id` / `config_indices`; writes `simulation_output.yaml`.
+- `SimulationManager::run()` — aligned (simulation, mission) pairs × drones × lidars; tracks `run_id` / `config_indices`; writes `simulation_output.yaml`.
 - `drone_mapper_simulation_main` — CLI arg parsing via `io::parseSimulationCliArgs`; composition loading via `io::parseCompositionFile`; logs startup failures to stderr; returns gracefully.
 - YAML parsers (`src/io/`) — drone, mission, lidar, simulation, and composition; nested composition expands to aligned `simulations[]`/`missions[]` pairs.
 - `MapsComparison::compare` — union-of-known-cells scoring; used by `SimulationRunImpl` and `maps_comparison` CLI.

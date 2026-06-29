@@ -22,7 +22,7 @@ Full table: `refactor_by_component.md`.
 | `MapsComparison` | `Scorer` | ~70% | Ex2 map interfaces + optional comparison YAML |
 | `SimulationRunImpl` | ex1 result assembly | ~30% | Mission + compare + `SimulationResult` |
 | `SimulationRunFactoryImpl` | ex1 DI in main | ~30% | Per-scenario object graph |
-| `SimulationManager` | (new) | ~20% | Cartesian product + report |
+| `SimulationManager` | (new) | ~20% | Aligned pair expansion + report |
 | YAML layer | ex1 txt parsers | ~50% | Same validation spirit, YAML format |
 | `.npy` I/O | ex1 text maps | ~20% | New implementation |
 
