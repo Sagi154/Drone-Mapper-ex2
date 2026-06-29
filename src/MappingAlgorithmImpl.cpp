@@ -7,10 +7,12 @@
 #include "MappingAlgorithmFrontier.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <numbers>
 #include <optional>
 #include <unordered_set>
+#include <utility>
 
 namespace drone_mapper {
 
@@ -115,6 +117,20 @@ std::size_t MappingAlgorithmImpl::countMappedCells() const {
 
 void MappingAlgorithmImpl::buildScanOrientations() {
     impl_->scan_orientations.clear();
+
+    if (impl_->scan_pass == 0) {
+        static constexpr std::array<std::pair<double, double>, 6> kAxisAligned = {{
+            {0.0, 0.0},
+            {180.0, 0.0},
+            {90.0, 0.0},
+            {270.0, 0.0},
+            {0.0, 90.0},
+            {0.0, -90.0},
+        }};
+        for (const auto& [az, el] : kAxisAligned) {
+            impl_->scan_orientations.push_back(Orientation{az * deg, el * deg});
+        }
+    }
 
     const types::MapConfig map_config = output_map_.getMapConfig();
     const double cell_cm = gridStepCm(map_config);
@@ -276,7 +292,8 @@ types::MappingStepCommand MappingAlgorithmImpl::handlePlanningPhase(const types:
             detail::hasNotMappedInSphere(output_map_, state.position, expanded_cm * cm);
         const bool mission_has_unknown = detail::hasAnyNotMappedInBounds(output_map_);
         const bool can_retry = impl_->scan_pass < kMaxScanPassIndex &&
-                               (impl_->scan_pass == 0 || impl_->last_scan_made_progress);
+                               (impl_->scan_pass == 0 || impl_->last_scan_made_progress ||
+                                mission_has_unknown);
         const bool should_rescan =
             can_retry &&
             ((impl_->scan_pass == 0 && (local_unknown_normal || mission_has_unknown)) ||

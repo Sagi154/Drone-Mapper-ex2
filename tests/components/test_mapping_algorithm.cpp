@@ -9,10 +9,13 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
+#include <set>
+#include <tuple>
 
 namespace drone_mapper {
 namespace {
@@ -101,6 +104,32 @@ firstCommandMatching(MappingAlgorithmImpl& algorithm, const types::DroneState& s
         }
     }
     return std::nullopt;
+}
+
+[[nodiscard]] std::set<std::tuple<double, double>>
+collectScanOrientationsUntilNonScan(MappingAlgorithmImpl& algorithm,
+                                    const types::DroneState& state, int max_steps) {
+    std::set<std::tuple<double, double>> orientations;
+    for (int step = 0; step < max_steps; ++step) {
+        const types::MappingStepCommand cmd = algorithm.nextStep(state, nullptr);
+        if (!cmd.scan_orientation.has_value()) {
+            break;
+        }
+        const double az = cmd.scan_orientation->horizontal.force_numerical_value_in(deg);
+        const double el = cmd.scan_orientation->altitude.force_numerical_value_in(deg);
+        orientations.insert({az, el});
+        if (cmd.status != types::AlgorithmStatus::Working) {
+            break;
+        }
+    }
+    return orientations;
+}
+
+void fillStartBubble(Map3DImpl& map, int cx, int cy, int cz, const types::MapConfig& config) {
+    map.set(gridPoint(cx, cy, cz, config), types::VoxelOccupancy::Empty);
+    fillEmptyBox(map, cx - 1, cx + 1, cy, cy, cz, cz, config);
+    fillEmptyBox(map, cx, cx, cy - 1, cy + 1, cz, cz, config);
+    fillEmptyBox(map, cx, cx, cy, cy, cz - 1, cz + 1, config);
 }
 
 [[nodiscard]] types::AlgorithmStatus runUntilTerminal(MappingAlgorithmImpl& algorithm,
@@ -340,6 +369,53 @@ TEST(MappingAlgorithmTest, FinishesWithUnmappableWhenStartNotSpherePassable) {
 
     const types::AlgorithmStatus last_status = runUntilTerminal(algorithm, state, 8000);
     EXPECT_EQ(last_status, types::AlgorithmStatus::FinishedWithUnmappableVoxels);
+}
+
+// What: scan pass zero on a fresh mission.
+// Expected: first scan sweep includes all six axis-aligned orientations.
+TEST(MappingAlgorithmTest, ScanPassZeroIncludesAxisAlignedOrientations) {
+    const types::MapConfig config = makeCorridorConfig();
+    Map3DImpl output_map{makeEmptyMap(NpyArray::shape_t{11, 11, 11}), config};
+    output_map.set(gridPoint(5, 5, 5, config), types::VoxelOccupancy::Empty);
+
+    MappingAlgorithmImpl algorithm{
+        makeMissionConfig(), makeLidarConfig(), makeDroneConfig(), output_map};
+
+    const types::DroneState state{
+        gridPoint(5, 5, 5, config), Orientation{0.0 * deg, 0.0 * deg}, 0};
+
+    const std::set<std::tuple<double, double>> orientations =
+        collectScanOrientationsUntilNonScan(algorithm, state, 200);
+
+    const std::set<std::tuple<double, double>> expected = {
+        {0.0, 0.0}, {180.0, 0.0}, {90.0, 0.0}, {270.0, 0.0}, {0.0, 90.0}, {0.0, -90.0},
+    };
+    for (const auto& axis : expected) {
+        EXPECT_TRUE(orientations.contains(axis)) << "missing axis-aligned orientation";
+    }
+}
+
+// What: start position with a passable local bubble (center + six face neighbors Empty).
+// Expected: planning finds a frontier and emits movement.
+TEST(MappingAlgorithmTest, DroneNavigatesFromStartWhenAdjacentCellsAreEmpty) {
+    const types::MapConfig config = makeCorridorConfig();
+    Map3DImpl output_map{makeEmptyMap(NpyArray::shape_t{11, 3, 3}), config};
+    fillStartBubble(output_map, 2, 1, 1, config);
+
+    MappingAlgorithmImpl algorithm{
+        makeMissionConfig(), makeLidarConfig(), makeDroneConfig(), output_map};
+
+    const types::DroneState state{
+        gridPoint(2, 1, 1, config), Orientation{0.0 * deg, 0.0 * deg}, 0};
+
+    const auto cmd = firstCommandMatching(
+        algorithm, state, 500, [](const types::MappingStepCommand& step) {
+            return step.movement.has_value() &&
+                   step.movement->type != types::MovementCommandType::Hover;
+        });
+
+    ASSERT_TRUE(cmd.has_value());
+    EXPECT_EQ(cmd->status, types::AlgorithmStatus::Working);
 }
 
 // What: latest_scan pointer is accepted but scanning phase is driven internally.
