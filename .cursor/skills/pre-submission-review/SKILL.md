@@ -43,8 +43,9 @@ Copy this checklist and verify each item against the live code, output, and docs
   `MappingAlgorithm.*`, `MockLidar.*`, `MapsComparison.*`, `Integration.*`
 - [ ] Component tests live in `tests/components/`, integration tests in `tests/integration/`
 - [ ] At least 2 integration tests: one with real `MappingAlgorithmImpl`, one with mock algorithm
-- [ ] Bug-catch readiness (Review Guideline §grading):
-  - Each component suite catches ≥50% of injected bugs for that component (>25% = partial)
+- [ ] Bug-catch readiness (assignment §Tests):
+  - Each component suite catches ≥60% of injected bugs for that component (Review Guideline cites >50% full / >25% partial)
+  - Integration tests catch ≥20% of injected bugs
   - Breaking one component does **not** fail unrelated component suites (isolation)
   - Integration tests exercise the end-to-end path (benchmark_map scenario)
 
@@ -66,7 +67,7 @@ Copy this checklist and verify each item against the live code, output, and docs
   - `resolution_request_status` present per run (`ACCEPTED | IGNORED | IGNORED TOO SMALL`)
   - `run_id` is 1-based; `run_dir` is `output_results/run_NNNN`
 - [ ] `output_results/run_NNNN/output_map.npy` and `error.log` present per run
-- [ ] Run folder naming: `run_0001`, `run_0002`, …; loop order is `simulations × missions × drones × lidars`
+- [ ] Run folder naming: `run_0001`, `run_0002`, …; loop order is **(simulation, mission) pairs × drones × lidars**
 - [ ] Failed scenarios: `mission_score: -1`, error in `error.log`, later runs still execute
 - [ ] Failed run with zero steps: `output_map.npy` omitted; failed run with ≥1 steps: partial map saved
 - [ ] Error logs written **at occurrence time** — timestamped lines, not batched at end

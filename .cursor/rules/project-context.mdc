@@ -26,7 +26,7 @@ TAU AdvCpp Assignment 2. Implement on the **course skeleton** (`ex_2_skeleton` A
 
 ## Architecture
 
-`SimulationManager` → cartesian product → `SimulationRunFactoryImpl` → `SimulationRunImpl` → `MissionControlImpl` / `DroneControlImpl`.
+`SimulationManager` → aligned (simulation, mission) pairs × drones × lidars → `SimulationRunFactoryImpl` → `SimulationRunImpl` → `MissionControlImpl` / `DroneControlImpl`.
 
 ## Before structural changes
 

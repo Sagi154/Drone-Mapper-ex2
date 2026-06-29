@@ -25,9 +25,10 @@ Must also cover `MockGPS` and `MockMovement`.
 
 ## Bug injection grading
 
-Per `context/Exercise 2 Review Guideline.docx`:
+Per assignment doc (`context/Advanced Topics TAU 2026B - Assignment 2 (1).docx`); Review Guideline cites lower component thresholds:
 
-- Catching **>50%** of injected bugs in a component = full marks; **>25%** = partial marks.
+- Catching **≥60%** of injected bugs in a component suite (assignment); Review Guideline: **>50%** full / **>25%** partial.
+- Integration tests should catch **≥20%** of injected bugs (assignment).
 - Unrelated component tests should **not** fail when another component is buggy — isolate where possible.
 - Some destructive bugs may legitimately fail more than one component suite; still encapsulate tests per component when possible.
 - Integration tests should also catch some injected bugs (instructor-provided scenarios).

@@ -35,7 +35,7 @@ description: Implements or wires a single Assignment 2 skeleton component with t
 | `MappingAlgorithmImpl` | `nextStep(state, nullptr)` on first call — **see algorithm contract below** |
 | `MissionControlImpl` | loop `drone_control.step()` until done/max_steps/error |
 | `SimulationRunFactoryImpl` | wire full object graph; set paths via `runOutputMap` / `runErrorLog` from `src/io/`; pass `run_id` from manager |
-| `SimulationManager` | cartesian product; compute `run_id`; aggregate `SimulationManagerReport`; write `simulation_output.yaml` |
+| `SimulationManager` | aligned (simulation, mission) pairs × drones × lidars; compute `run_id`; aggregate `SimulationManagerReport`; write `simulation_output.yaml` |
 | `Map3DImpl` | `.npy` load/save; `MapConfig` boundaries/offset/resolution |
 
 ## MappingAlgorithmImpl — contract that must hold
