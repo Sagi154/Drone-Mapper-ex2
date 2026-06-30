@@ -98,25 +98,6 @@ private:
     return result;
 }
 
-[[nodiscard]] inline std::filesystem::path scenarioMapPath(int scenario) {
-#ifdef DRONE_MAPPER_SOURCE_DIR
-    return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR} / "data_maps" /
-           ("scenario_" + std::to_string(scenario) + "_map.npy");
-#else
-    return std::filesystem::path{"data_maps/scenario_" + std::to_string(scenario) + "_map.npy"};
-#endif
-}
-
-[[nodiscard]] inline std::filesystem::path scenarioCompositionPath(int scenario) {
-#ifdef DRONE_MAPPER_SOURCE_DIR
-    return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR} / "scenarios" /
-           ("composition_scenario" + std::to_string(scenario) + ".yaml");
-#else
-    return std::filesystem::path{"scenarios/composition_scenario" + std::to_string(scenario) +
-                                 ".yaml"};
-#endif
-}
-
 [[nodiscard]] inline std::filesystem::path scenariosDir() {
 #ifdef DRONE_MAPPER_SOURCE_DIR
     return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR} / "scenarios";
@@ -126,7 +107,7 @@ private:
 }
 
 // Benchmark integration: parse sim/mission YAML directly so max_steps is never lost in composition
-// expansion; use scenario drone/lidar configs proven in CI scenario runs.
+// expansion; reuse shared drone config from scenarios/.
 [[nodiscard]] inline io::ConfigParseResult<types::SimulationCompositionData> loadBenchmarkComposition(
     io::IRunErrorLog& log) {
     io::ConfigParseResult<types::SimulationCompositionData> result{};
@@ -150,19 +131,6 @@ private:
     composition.missions.push_back(mission);
     composition.drones.push_back(io::parseDroneConfig(scenariosDir() / "drone_ex1port.yaml", log));
     composition.lidars.push_back(io::parseLidarConfig(configFixturePath("lidar_benchmark.yaml"), log));
-    return result;
-}
-
-[[nodiscard]] inline io::ConfigParseResult<types::SimulationCompositionData> loadScenarioComposition(
-    int scenario,
-    io::IRunErrorLog& log) {
-    io::ConfigParseResult<types::SimulationCompositionData> result =
-        io::parseCompositionFile(scenarioCompositionPath(scenario), log);
-    if (result.ok) {
-        for (types::SimulationConfigData& simulation : result.value.simulations) {
-            simulation.map_filename = scenarioMapPath(scenario);
-        }
-    }
     return result;
 }
 

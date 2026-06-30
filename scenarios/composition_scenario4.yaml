@@ -1,9 +1,0 @@
-simulation_compositions:
-  simulations:
-    - simulation_config: "sim_scenario4.yaml"
-      mission_configs:
-        - "mission_ex1port.yaml"
-  drone_configs:
-    - "drone_ex1port.yaml"
-  lidar_configs:
-    - "lidar_scenario45.yaml"

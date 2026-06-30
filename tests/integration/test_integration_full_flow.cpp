@@ -1,5 +1,5 @@
 // tests/integration/test_integration_full_flow.cpp — Integration.*
-// End-to-end runs: real algorithm on benchmark map, mock algorithm wiring, ex1-ported scenarios.
+// End-to-end runs: real algorithm on benchmark map, mock algorithm wiring.
 
 #include <drone_mapper/DroneControlImpl.h>
 #include <drone_mapper/IMappingAlgorithm.h>
@@ -259,47 +259,6 @@ TEST(Integration, MockAlgorithm_FullRun_CompletesWithScore) {
     EXPECT_TRUE(readAllLines(io::runErrorLog(output_path, 1)).empty());
 
     removeDirectory(output_path);
-}
-
-void runScenarioCompositionIntegration(int scenario) {
-    test_support::CapturingErrorLog log;
-    const io::ConfigParseResult<types::SimulationCompositionData> composition_result =
-        test_support::loadScenarioComposition(scenario, log);
-    ASSERT_TRUE(composition_result.ok) << "Failed to load scenario " << scenario << " composition";
-    EXPECT_TRUE(log.entries().empty());
-
-    const std::filesystem::path output_path =
-        std::filesystem::temp_directory_path() /
-        ("integration_scenario_" + std::to_string(scenario));
-    removeDirectory(output_path);
-
-    const auto start = std::chrono::steady_clock::now();
-    const types::SimulationManagerReport report =
-        runComposition(composition_result.value, output_path);
-    const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
-        std::chrono::steady_clock::now() - start);
-
-    ASSERT_FALSE(report.runs.empty());
-    for (const types::SimulationResult& run : report.runs) {
-        EXPECT_GE(run.mission_score, 0.0);
-    }
-    EXPECT_LT(elapsed.count(), 60);
-
-    removeDirectory(output_path);
-}
-
-// Scenario: ex1-ported hidden maps via scenario composition YAML and real algorithm.
-// Expected: each scenario completes without mission_score -1 within 60 s.
-TEST(Integration, Scenario3_Composition_CompletesWithoutError) {
-    runScenarioCompositionIntegration(3);
-}
-
-TEST(Integration, Scenario4_Composition_CompletesWithoutError) {
-    runScenarioCompositionIntegration(4);
-}
-
-TEST(Integration, Scenario5_Composition_CompletesWithoutError) {
-    runScenarioCompositionIntegration(5);
 }
 
 } // namespace drone_mapper

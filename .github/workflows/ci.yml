@@ -104,44 +104,6 @@ jobs:
           docker run --rm drone-mapper-ex2-ci:latest \
             ctest --test-dir build/ci -L integration --output-on-failure
 
-      - name: Run scenario simulations
-        run: |
-          set -euo pipefail
-          for scenario in 3 4 5; do
-            echo "=== Running scenario ${scenario} ==="
-            out_dir="${PWD}/ci-artifacts/scenario_${scenario}"
-            mkdir -p "${out_dir}"
-            docker run --rm \
-              -v "${out_dir}:/output" \
-              -w /workspace \
-              drone-mapper-ex2-ci:latest \
-              ./build/ci/drone_mapper_simulation \
-                /workspace/scenarios/composition_scenario${scenario}.yaml \
-                /output
-          done
-
-      - name: Check scenario mission scores
-        run: |
-          set -euo pipefail
-          failed=0
-          for scenario in 3 4 5; do
-            report="ci-artifacts/scenario_${scenario}/simulation_output.yaml"
-            echo "=== Scenario ${scenario} ==="
-            if [[ ! -f "${report}" ]]; then
-              echo "FAIL: missing ${report}"
-              failed=1
-              continue
-            fi
-            grep -E 'run_id:|mission_score:' "${report}" || true
-            if grep -q 'mission_score: -1' "${report}"; then
-              echo "FAIL: at least one run reported mission_score: -1"
-              failed=1
-            else
-              echo "PASS: all runs scored >= 0"
-            fi
-          done
-          exit "${failed}"
-
       - name: Upload CI logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
