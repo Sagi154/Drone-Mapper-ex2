@@ -16,6 +16,7 @@ This document describes the implemented Assignment 2 design. Orchestration, runt
 
 - `types::MapConfig` is the canonical map-geometry bundle: `MappingBounds`, `Position3D offset`, and `PhysicalLength resolution`.
 - `types::SimulationConfigData` provides the hidden map file, hidden map resolution, map offset, initial drone position, and initial heading.
+- `Map3DImpl` reads hidden maps as NumPy `uint8` (`0` = Empty, `>= 1` = Occupied) and output maps as `int8` (full `VoxelOccupancy` enum). Dtype is distinguished via `NpyArray::Type()` (`'u'` vs `'i'`). See `docs/map3d_impl_contract.md`.
 - `types::MissionConfigData` holds mission behavior, optional mapping `boundaries` from `mission_config` YAML (20.6), and requested output resolution parameters. When boundaries are unset, the output map inherits hidden-map bounds.
 - `types::MissionRunResult` contains mission status, step count, and mission-level errors.
 - `types::SimulationResult` contains one run's configs, mission results, output map file, output map config, resolution request status, and final score.

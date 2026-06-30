@@ -49,11 +49,18 @@ Skeleton already implements `MockLidar`; write tests only. Example bug: rays rea
 
 ## Map format for test fixtures
 
-All `.npy` test maps must follow the same format as `data_maps/benchmark_map.npy`:
+Hidden-map `.npy` fixtures (instructor maps, `data_maps/benchmark_map.npy`):
 
 - dtype `uint8`, 3D C-order array `(nx, ny, nz)`
-- Create with: `np.zeros((nx, ny, nz), dtype=np.uint8)`, set occupied voxels to `1`
-- See `docs/map3d_impl_contract.md` for world↔voxel mapping formula
+- Create with: `np.zeros((nx, ny, nz), dtype=np.uint8)`, set occupied voxels to `1` (values `>= 1` all read as `Occupied`)
+- See `docs/map3d_impl_contract.md` for world↔voxel mapping and the uint8 clamp rule
+
+Mutable output-map fixtures (component tests that mutate via `Map3DImpl::set`):
+
+- dtype `int8`, initialized to `VoxelOccupancy::Unmapped` (`-1`)
+- `Map3DImpl` reads `int8` via signed path — do not assume uint8 clamp applies
+
+Regression tests: `Map3DImpl.StoredValuesGreaterThanOneReadAsOccupied`, `Map3DImpl.Int8UnmappedCellsRemainUnmapped`
 
 ## Integration tests (min 2)
 

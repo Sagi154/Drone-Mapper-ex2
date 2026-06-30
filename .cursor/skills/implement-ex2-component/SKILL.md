@@ -36,7 +36,7 @@ description: Implements or wires a single Assignment 2 skeleton component with t
 | `MissionControlImpl` | loop `drone_control.step()` until done/max_steps/error |
 | `SimulationRunFactoryImpl` | wire full object graph; set paths via `runOutputMap` / `runErrorLog` from `src/io/`; pass `run_id` from manager |
 | `SimulationManager` | aligned (simulation, mission) pairs × drones × lidars; compute `run_id`; aggregate `SimulationManagerReport`; write `simulation_output.yaml` |
-| `Map3DImpl` | `.npy` load/save; `MapConfig` boundaries/offset/resolution |
+| `Map3DImpl` | `.npy` load/save; `MapConfig` boundaries/offset/resolution; hidden `uint8` read clamp (`>= 1` → Occupied); output `int8` full enum |
 
 ## MappingAlgorithmImpl — contract that must hold
 

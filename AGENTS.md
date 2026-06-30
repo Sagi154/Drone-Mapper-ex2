@@ -37,7 +37,7 @@ TAU Advanced Topics in Programming, Assignment 2. Course skeleton is merged at r
 
 ## Test maps
 
-Hidden-map inputs are `uint8` `.npy` (C-order, `0`=Empty, `1`=Occupied). See `docs/map3d_impl_contract.md`.
+Hidden-map inputs are `uint8` `.npy` (C-order). On read, `0` = Empty and any value `>= 1` = Occupied (instructor maps may store `2`, `18`, `45`, etc. in occupied cells — all count as Occupied per course staff). Mutable output maps use `int8` with the full `VoxelOccupancy` enum (`-3` … `1`). See `docs/map3d_impl_contract.md`.
 
 ### Instructor integration maps (grading scenarios)
 
@@ -66,7 +66,7 @@ CI: the `docker-build-test` job runs focused compositions after unit tests; scor
 
 ### Dev/unit-test maps (`data_maps/`)
 
-Small golden maps (`single_voxel_*.npy`, etc.) and `benchmark_map.npy` for component tests. Do **not** substitute these for instructor scenarios in integration grading.
+Small golden maps (`single_voxel_*.npy`, etc.) and `benchmark_map.npy` for component tests. `benchmark_map.npy` is byte-identical to `scenario_house.npy`. Do **not** substitute these for instructor scenarios in integration grading.
 
 ## Build and run
 

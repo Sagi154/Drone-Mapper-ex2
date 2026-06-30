@@ -61,10 +61,19 @@ Maps and YAML configs live in `tests/data/instructor/`. Integration tests that r
 
 ## Dev benchmark map (component tests)
 
-`data_maps/benchmark_map.npy` (`29×30×31`) — legacy component/integration fixture, not a substitute for instructor maps.
+`data_maps/benchmark_map.npy` (`29×30×31`) — legacy component/integration fixture, byte-identical to `scenario_house.npy`; not a substitute for instructor maps.
 
 - Config fixture: `tests/data/configs/sim_benchmark.yaml`
 - Path helper: `test_support::benchmarkMapPath()` in `tests/support/ConfigFixtures.hpp`
+
+## Map3D occupancy read rules
+
+| On-disk dtype | Used for | Read semantics |
+|---------------|----------|----------------|
+| `uint8` (`Type() == 'u'`) | Hidden/input maps | `0` → Empty; `>= 1` → Occupied (clamp per instructor clarification) |
+| `int8` (`Type() == 'i'`) | Mutable output maps | Full `VoxelOccupancy` enum (`-3` … `1`); unknown positives → `Unmapped` |
+
+Regression: `Map3DImpl.StoredValuesGreaterThanOneReadAsOccupied`, `Map3DImpl.Int8UnmappedCellsRemainUnmapped`. See `docs/map3d_impl_contract.md`.
 
 ## Coverage
 

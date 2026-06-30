@@ -67,7 +67,7 @@ Vendored in `tests/data/instructor/map/`. Use these for integration tests and CI
 
 ## Dev/unit-test maps (`data_maps/`)
 
-Small golden maps (`single_voxel_*.npy`, etc.) and `benchmark_map.npy` for component tests (`Map3DImpl.*`, `MapsComparison.*`). Config fixture: `tests/data/configs/sim_benchmark.yaml`; path helper: `test_support::benchmarkMapPath()`.
+Small golden maps (`single_voxel_*.npy`, etc.) and `benchmark_map.npy` for component tests (`Map3DImpl.*`, `MapsComparison.*`). `benchmark_map.npy` is byte-identical to `scenario_house.npy`. Config fixture: `tests/data/configs/sim_benchmark.yaml`; path helper: `test_support::benchmarkMapPath()`.
 
 When writing `.npy` test fixtures in Python/NumPy:
 
@@ -83,3 +83,8 @@ np.save("my_test_map.npy", arr)
 ```bash
 ./build/drone_mapper_simulation_test --gtest_filter=Map3DImpl.*
 ```
+
+Key regression tests for occupancy read rules:
+
+- `Map3DImpl.StoredValuesGreaterThanOneReadAsOccupied` — `uint8` values `2`, `3`, `4`, `18`, `45` → `Occupied`
+- `Map3DImpl.Int8UnmappedCellsRemainUnmapped` — `int8` `-1` stays `Unmapped` (not clamped via unsigned read path)

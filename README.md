@@ -16,7 +16,7 @@ Course skeleton merged into this repo. Stubs compile; full simulator, YAML I/O, 
 ```text
 include/drone_mapper/     Interfaces, types, component headers
 src/                      Implementations and executable entry points
-data_maps/                Dev/unit-test .npy maps (golden maps, benchmark_map.npy)
+data_maps/                Dev/unit-test .npy maps (benchmark_map.npy is identical to scenario_house.npy)
 tests/data/instructor/    Instructor integration maps and YAML configs (grading scenarios)
 cpp_yaml_example/         yaml-cpp reference (course example)
 tests/                    GTest suites (to be added)
