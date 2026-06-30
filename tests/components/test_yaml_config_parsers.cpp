@@ -40,15 +40,6 @@ private:
 #endif
 }
 
-[[nodiscard]] std::filesystem::path skeletonHouseSimulationPath() {
-#ifdef DRONE_MAPPER_SOURCE_DIR
-    return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR}.parent_path() / "ex_2_skeleton" / "inputs" /
-           "simulation" / "house_simulation.yaml";
-#else
-    return std::filesystem::path{"ex_2_skeleton/inputs/simulation/house_simulation.yaml"};
-#endif
-}
-
 [[nodiscard]] std::filesystem::path instructorPath(const std::string& rel) {
 #ifdef DRONE_MAPPER_SOURCE_DIR
     return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR} / "tests" / "data" / "instructor" / rel;
@@ -114,23 +105,6 @@ TEST(YamlConfigParser, ParsesMapAxesOffsetWhenMapOffsetAbsent) {
     EXPECT_EQ(config.map_offset.x, 1.0 * x_extent[cm]);
     EXPECT_EQ(config.map_offset.y, 2.0 * y_extent[cm]);
     EXPECT_EQ(config.map_offset.z, 150.0 * z_extent[cm]);
-    EXPECT_TRUE(log.entries().empty());
-}
-
-TEST(YamlConfigParser, ParsesInstructorHouseSimulationMapAxesOffsetAndMapPath) {
-    const std::filesystem::path path = skeletonHouseSimulationPath();
-    if (!std::filesystem::exists(path)) {
-        GTEST_SKIP() << "Skeleton inputs not available: " << path;
-    }
-
-    CapturingErrorLog log;
-    const types::SimulationConfigData config = io::parseSimulationConfig(path, log);
-
-    EXPECT_EQ(config.map_offset.x, 0.0 * x_extent[cm]);
-    EXPECT_EQ(config.map_offset.y, 0.0 * y_extent[cm]);
-    EXPECT_EQ(config.map_offset.z, 150.0 * z_extent[cm]);
-    ASSERT_TRUE(std::filesystem::exists(config.map_filename));
-    EXPECT_EQ(config.map_filename.filename(), "scenario_house.npy");
     EXPECT_TRUE(log.entries().empty());
 }
 

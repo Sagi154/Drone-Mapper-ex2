@@ -98,16 +98,8 @@ private:
     return result;
 }
 
-[[nodiscard]] inline std::filesystem::path scenariosDir() {
-#ifdef DRONE_MAPPER_SOURCE_DIR
-    return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR} / "scenarios";
-#else
-    return std::filesystem::path{"scenarios"};
-#endif
-}
-
 // Benchmark integration: parse sim/mission YAML directly so max_steps is never lost in composition
-// expansion; reuse shared drone config from scenarios/.
+// expansion; use local test config fixtures (not instructor scenarios).
 [[nodiscard]] inline io::ConfigParseResult<types::SimulationCompositionData> loadBenchmarkComposition(
     io::IRunErrorLog& log) {
     io::ConfigParseResult<types::SimulationCompositionData> result{};
@@ -129,7 +121,7 @@ private:
     composition.composition_file = configFixturePath("composition_benchmark.yaml");
     composition.simulations.push_back(simulation);
     composition.missions.push_back(mission);
-    composition.drones.push_back(io::parseDroneConfig(scenariosDir() / "drone_ex1port.yaml", log));
+    composition.drones.push_back(io::parseDroneConfig(configFixturePath("drone_small.yaml"), log));
     composition.lidars.push_back(io::parseLidarConfig(configFixturePath("lidar_benchmark.yaml"), log));
     return result;
 }
