@@ -104,6 +104,32 @@ jobs:
           docker run --rm drone-mapper-ex2-ci:latest \
             ctest --test-dir build/ci -L integration --output-on-failure
 
+      # Smoke-run the three focused instructor compositions end-to-end via the CLI binary.
+      # Each focused YAML is 1 sim × 1 mission × 1 drone × 1 lidar = 1 run.
+      # Asserts: simulation_output.yaml written, mission_score >= 90, no -1.
+      # Do NOT run full sim_compose.yaml here (24 runs; timing unverified).
+      - name: Check instructor composition mission scores
+        run: |
+          set -e
+          mkdir -p /tmp/instructor_output
+          for comp in small_room big_room house_lower; do
+            docker run --rm \
+              -v /tmp/instructor_output:/output \
+              drone-mapper-ex2-ci:latest \
+              /workspace/build/ci/drone_mapper_simulation \
+                "/workspace/tests/data/instructor/compositions/composition_${comp}.yaml" \
+                "/output/${comp}"
+            output_yaml="/tmp/instructor_output/${comp}/simulation_output.yaml"
+            if [[ ! -f "$output_yaml" ]]; then
+              echo "ERROR: simulation_output.yaml missing for ${comp}" && exit 1
+            fi
+            score=$(grep 'mission_score:' "$output_yaml" | awk 'NR==1{print $2}')
+            if ! awk "BEGIN { exit (${score} + 0 >= 90) ? 0 : 1 }"; then
+              echo "FAIL: ${comp} mission_score=${score} (expected >= 90)" && exit 1
+            fi
+            echo "OK: ${comp} mission_score=${score}"
+          done
+
       - name: Upload CI logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
