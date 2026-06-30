@@ -88,17 +88,17 @@ Six scan steps mapping only the nearest wall cells is not enough to open adjacen
 
 `MappingAlgorithmImpl::nextStep` receives `latest_scan` but does `(void)latest_scan`. Ex1 used scan results to decide on next actions. This may be fine if the algorithm reads the output map instead, but verify intentionally.
 
-### 7. Validate on the actual scenario maps, not just CI
+### 7. Validate on instructor scenario maps
 
-The integration tests only assert `mission_score >= 0`, which passes even on `-1` missions that stop at 6 mapped cells. **Always run**:
+Integration tests assert `mission_score >= 90` on focused instructor compositions. **Also run manually**:
 
 ```bash
-./build/drone_mapper_simulation scenarios/composition_scenario3.yaml /tmp/out3
-grep mission_score /tmp/out3/simulation_output.yaml
-./build/maps_comparison data_maps/scenario_3_map.npy /tmp/out3/output_results/run_0001/output_map.npy
+./build/drone_mapper_simulation tests/data/instructor/compositions/composition_small_room.yaml /tmp/out
+grep mission_score /tmp/out/simulation_output.yaml
+./build/maps_comparison tests/data/instructor/map/scenario_small.npy /tmp/out/output_results/run_0001/output_map.npy
 ```
 
-A score of 0.55 on scenario 3 (99% unmapped) means the algorithm stopped at start. A working port should produce scores meaningfully above 0 and the drone should traverse the map.
+A score well below 90 means the algorithm is not exploring effectively.
 
 ### 8. Compare mapped cell count, not just status
 
@@ -111,7 +111,7 @@ After a run, check how many voxels were actually mapped in `output_map.npy`. The
 1. Run component test filter for affected component.
 2. Scan new code against `docs/review-error-codes.md` (e03, e07, e08, e16, e17, e22).
 3. Profile small-map runtime if algorithm changed (b05).
-4. **Run scenario 3 manually and check score and mapped cell count** — do not rely on CI alone.
+4. **Run an instructor focused composition manually and check score** — do not rely on CI alone.
 
 ## Full mapping table
 

@@ -43,19 +43,28 @@ Example injected bug: rays travel only 2/3 of `z_max`. Cover obstacles at the **
 
 Integration scenarios (including instructor-provided config/map files) must finish within **1 minute** — both with and without injected bugs.
 
-## Integration map (benchmark)
+## Instructor integration maps (primary)
 
-`data_maps/benchmark_map.npy` (ClassicCube-2, `29×30×31`) is the instructor-provided integration scenario map. Integration tests that run the full simulation end-to-end **should use this map** (or a compatible config) and assert the achieved score is close to 100.
+Maps and YAML configs live in `tests/data/instructor/`. Integration tests that run the full simulation end-to-end **should use these files** and assert `mission_score >= 90`.
+
+| Map | Path | Shape |
+|-----|------|-------|
+| House | `tests/data/instructor/map/scenario_house.npy` | `(29, 30, 31)` |
+| Small | `tests/data/instructor/map/scenario_small.npy` | `(20, 20, 20)` |
+| Big | `tests/data/instructor/map/scenario_big.npy` | `(30, 30, 30)` |
+
+- Full composition: `tests/data/instructor/sim_compose.yaml` (24 runs — parse-only in tests unless timing verified)
+- Focused compositions: `tests/data/instructor/compositions/composition_{small_room,big_room,house_lower}.yaml`
+- Path helpers: `test_support::instructorInputsDir()`, `loadInstructorFocusedComposition()` in `tests/support/ConfigFixtures.hpp`
+- Integration tests: `Integration.Instructor*` in `tests/integration/test_integration_full_flow.cpp`
+- CI: `docker-build-test` job — **Check instructor composition mission scores**
+
+## Dev benchmark map (component tests)
+
+`data_maps/benchmark_map.npy` (`29×30×31`) — legacy component/integration fixture, not a substitute for instructor maps.
 
 - Config fixture: `tests/data/configs/sim_benchmark.yaml`
 - Path helper: `test_support::benchmarkMapPath()` in `tests/support/ConfigFixtures.hpp`
-
-## Ex1-ported scenario maps (3–5)
-
-`data_maps/scenario_{3,4,5}_map.npy` — ex1 grading test maps converted to valid ex2 `.npy` inputs (layout preserved, 10 cm/voxel). Use for integration/end-to-end runs alongside the benchmark map; must finish within **1 minute**.
-
-- Compositions: `scenarios/composition_scenario3.yaml`, `composition_scenario4.yaml`, `composition_scenario5.yaml`
-- CI: `docker-build-test` job in `.github/workflows/ci.yml` runs all three after unit tests
 
 ## Coverage
 

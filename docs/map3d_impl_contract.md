@@ -41,28 +41,32 @@ If `MappingBounds` are unset (all zero), they are derived from array shape, offs
 
 ## Reference map (canonical format)
 
-`data_maps/benchmark_map.npy` (ClassicCube-2, shape `(29, 30, 31)`, `uint8`) is the instructor-provided reference map from the skeleton. All synthetic test maps must use the same on-disk format:
+All hidden-map `.npy` files use the same on-disk format:
 
 - dtype: `uint8` (hidden/input maps) or `int8` (mutable output maps)
 - shape: 3D `(nx, ny, nz)` — x=dim0, y=dim1, z=dim2, C-order
 - values: `0` = Empty, `1` = Occupied for student-authored fixtures
 
-The benchmark map may also contain ClassicCube export type codes (`2`, `3`, `4`, …). `Map3DImpl` treats only `0`/`1` as Empty/Occupied; other stored bytes map to `Unmapped`. Use `sim_benchmark.yaml` for integration scenarios on this map.
+`Map3DImpl` treats only `0`/`1` as Empty/Occupied; other stored bytes map to `Unmapped`.
 
-## Ex1-ported scenario maps (3–5)
+## Instructor integration maps
 
-`data_maps/scenario_{3,4,5}_map.npy` are ex1 instructor test maps converted to valid ex2 hidden-map inputs. Source was sparse ex1 `map_input.txt` (occupied-cell list + bounds line); conversion preserves voxel layout as dense `uint8` arrays.
+Vendored in `tests/data/instructor/map/`. Use these for integration tests and CI — not legacy `data_maps/benchmark_map.npy`.
 
-| File | Shape | World at 10 cm/voxel | Ex1 layout |
-|------|-------|----------------------|------------|
-| `scenario_3_map.npy` | `(11, 11, 9)` | 100×100×80 cm | Hollow shell, 2-voxel passages |
-| `scenario_4_map.npy` | `(16, 16, 16)` | 150×150×150 cm | Outer shell + inner room partitions |
-| `scenario_5_map.npy` | `(21, 21, 21)` | 200×200×200 cm | Periodic grid maze |
+| File | Shape | Resolution | Notes |
+|------|-------|------------|-------|
+| `scenario_house.npy` | `(29, 30, 31)` | 10 cm/voxel | `house_simulation.yaml`; `map_axes_offset.height_offset: 150` |
+| `scenario_small.npy` | `(20, 20, 20)` | 10 cm/voxel | `small_simulation_room.yaml`, `small_simulation_out.yaml` |
+| `scenario_big.npy` | `(30, 30, 30)` | 10 cm/voxel | `large_simulation_room.yaml`, `large_simulation_out.yaml` |
 
-- Resolution: `10 cm` per voxel (ex1 integer grid cells reinterpreted at 10 cm, same as `benchmark_map.npy`).
-- Configs: `scenarios/composition_scenarioN.yaml` (+ `sim_scenarioN.yaml`, shared drone/mission/lidar YAML in `scenarios/`).
-- Regenerate: `python scripts/convert_ex1_scenario.py <ex1_scenario_dir> data_maps/scenario_N_map.npy` (requires ex1 `map_input.txt` source).
-- CI: `.github/workflows/ci.yml` (`docker-build-test` job, after unit tests).
+- Full composition: `tests/data/instructor/sim_compose.yaml` (24 runs when expanded)
+- Focused compositions: `tests/data/instructor/compositions/composition_{small_room,big_room,house_lower}.yaml`
+- Integration tests: `Integration.Instructor*` in `tests/integration/test_integration_full_flow.cpp`
+- CI: `.github/workflows/ci.yml` — **Check instructor composition mission scores** (asserts `mission_score >= 90`)
+
+## Dev/unit-test maps (`data_maps/`)
+
+Small golden maps (`single_voxel_*.npy`, etc.) and `benchmark_map.npy` for component tests (`Map3DImpl.*`, `MapsComparison.*`). Config fixture: `tests/data/configs/sim_benchmark.yaml`; path helper: `test_support::benchmarkMapPath()`.
 
 When writing `.npy` test fixtures in Python/NumPy:
 
