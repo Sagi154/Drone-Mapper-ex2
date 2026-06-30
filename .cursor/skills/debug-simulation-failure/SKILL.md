@@ -37,6 +37,7 @@ SimulationManager
 | `max_steps` | Algorithm not converging; frontier stuck; increase efficiency |
 | Timeout (b05) | Redundant rescans; O(n²) loops in `nextStep`; profile step count |
 | Wrong score | `MapConfig` offset/resolution mismatch; comparison bounds |
+| Low score on instructor house map | Hidden `uint8` values `> 1` must read as `Occupied` (not `Unmapped`); verify `Map3DImpl` uses `Type() == 'u'` clamp path — see `docs/map3d_impl_contract.md` |
 | Missing file (b06) | Path resolution (CWD vs relative vs absolute) |
 
 ## Timeout mitigation

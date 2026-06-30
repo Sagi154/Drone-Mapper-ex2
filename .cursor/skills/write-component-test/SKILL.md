@@ -49,20 +49,33 @@ Skeleton already implements `MockLidar`; write tests only. Example bug: rays rea
 
 ## Map format for test fixtures
 
-All `.npy` test maps must follow the same format as `data_maps/benchmark_map.npy`:
+Hidden-map `.npy` fixtures (instructor maps, `data_maps/benchmark_map.npy`):
 
 - dtype `uint8`, 3D C-order array `(nx, ny, nz)`
-- Create with: `np.zeros((nx, ny, nz), dtype=np.uint8)`, set occupied voxels to `1`
-- See `docs/map3d_impl_contract.md` for world↔voxel mapping formula
+- Create with: `np.zeros((nx, ny, nz), dtype=np.uint8)`, set occupied voxels to `1` (values `>= 1` all read as `Occupied`)
+- See `docs/map3d_impl_contract.md` for world↔voxel mapping and the uint8 clamp rule
+
+Mutable output-map fixtures (component tests that mutate via `Map3DImpl::set`):
+
+- dtype `int8`, initialized to `VoxelOccupancy::Unmapped` (`-1`)
+- `Map3DImpl` reads `int8` via signed path — do not assume uint8 clamp applies
+
+Regression tests: `Map3DImpl.StoredValuesGreaterThanOneReadAsOccupied`, `Map3DImpl.Int8UnmappedCellsRemainUnmapped`
 
 ## Integration tests (min 2)
 
 1. All components + **real** `MappingAlgorithmImpl`
 2. All components + **mock** algorithm (GMock `IMappingAlgorithm`)
-3. Full flow with `benchmark_map.npy` (ClassicCube-2, `29×30×31`) — assert `mission_score` ≥ 90 (instructor-provided scenario; score should approach 100)
-4. Ex1-ported maps `scenario_{3,4,5}_map.npy` — use `scenarios/composition_scenarioN.yaml`; layout from ex1 grading scenarios, converted to ex2 format at 10 cm/voxel
+3. Full flow with instructor maps in `tests/data/instructor/` — assert `mission_score >= 90`
+4. Optional legacy benchmark: `benchmark_map.npy` via `tests/data/configs/sim_benchmark.yaml` (component-style smoke; not a substitute for instructor scenarios)
 
-Instructors provide config and map files for integration grading. Each integration test must finish within **1 minute** — with and without injected bugs. Use `tests/data/configs/sim_benchmark.yaml` and `test_support::benchmarkMapPath()` for the benchmark; `scenarios/composition_scenarioN.yaml` for ex1-ported maps.
+Instructor integration maps: `scenario_house.npy`, `scenario_small.npy`, `scenario_big.npy` under `tests/data/instructor/map/`.
+
+- Focused compositions: `tests/data/instructor/compositions/composition_{small_room,big_room,house_lower}.yaml`
+- Path helpers: `test_support::instructorInputsDir()`, `loadInstructorFocusedComposition()` in `tests/support/ConfigFixtures.hpp`
+- Tests: `Integration.Instructor*` in `tests/integration/test_integration_full_flow.cpp`
+
+Each integration test must finish within **1 minute** — with and without injected bugs.
 
 ## Run
 

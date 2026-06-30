@@ -16,6 +16,7 @@ This document describes the implemented Assignment 2 design. Orchestration, runt
 
 - `types::MapConfig` is the canonical map-geometry bundle: `MappingBounds`, `Position3D offset`, and `PhysicalLength resolution`.
 - `types::SimulationConfigData` provides the hidden map file, hidden map resolution, map offset, initial drone position, and initial heading.
+- `Map3DImpl` reads hidden maps as NumPy `uint8` (`0` = Empty, `>= 1` = Occupied) and output maps as `int8` (full `VoxelOccupancy` enum). Dtype is distinguished via `NpyArray::Type()` (`'u'` vs `'i'`). See `docs/map3d_impl_contract.md`.
 - `types::MissionConfigData` holds mission behavior, optional mapping `boundaries` from `mission_config` YAML (20.6), and requested output resolution parameters. When boundaries are unset, the output map inherits hidden-map bounds.
 - `types::MissionRunResult` contains mission status, step count, and mission-level errors.
 - `types::SimulationResult` contains one run's configs, mission results, output map file, output map config, resolution request status, and final score.
@@ -427,7 +428,7 @@ Each B-owned GTest suite is scoped to a single component so that a bug injected 
 | `MissionControl.*` | loop-continues-after-error; max-steps off-by-one; output map not saved on error/max-steps branch; `save` failure silenced; error message dropped |
 | `MappingAlgorithm.*` | algorithm never terminates (no frontier guard); scan phase exits early; movement combined with scan in one step; `Finished` status not re-emitted after first finish; frontier BFS path wrong or absent |
 | `MapsComparison.*` | union double-counted; correct count off-by-one; target-only unknown cells scored wrong; out-of-bounds cells included; CLI stdout contains extra text beyond score; CLI exit path on missing files |
-| `Integration.*` | end-to-end wiring: factory loads map, wires all components, run produces non-error score; mock algorithm receives calls in correct order; ex1-ported scenarios complete within timeout |
+| `Integration.*` | end-to-end wiring: factory loads map, wires all components, run produces non-error score; mock algorithm receives calls in correct order; instructor focused compositions complete within timeout with `mission_score >= 90` |
 
 **Isolation guarantee:** A bug injected into `MapsComparison::compare` (e.g. wrong denominator) will fail `MapsComparison.*` and affect `SimulationRun.*` score assertions and `Integration.*`, but must not touch `DroneControl.*`, `MissionControl.*`, or `MappingAlgorithm.*` — because those suites use a `MockMapsComparison` or avoid calling `compare` directly.
 

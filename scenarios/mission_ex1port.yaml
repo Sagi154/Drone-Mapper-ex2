@@ -1,4 +1,0 @@
-mission_config:
-  max_steps: 20000
-  gps_resolution_cm: 10
-  output_mapping_resolution_factor: 1

@@ -31,7 +31,7 @@ Copy this checklist and verify each item against the live code, output, and docs
   - Missing `output_path` → defaults to CWD
 - [ ] Missing `simulation.yaml` / missing map files → error logged immediately, graceful return from `main` (b06)
 - [ ] Component/unit tests: synthetic/small maps finish in ~10 s each (b05)
-- [ ] Integration tests (including `composition_benchmark.yaml` + `benchmark_map.npy`): finish within **1 minute** (b05)
+- [ ] Integration tests (instructor focused compositions + optional `composition_benchmark.yaml`): finish within **1 minute** (b05)
 
 ---
 
@@ -47,7 +47,7 @@ Copy this checklist and verify each item against the live code, output, and docs
   - Each component suite catches ≥60% of injected bugs for that component (Review Guideline cites >50% full / >25% partial)
   - Integration tests catch ≥20% of injected bugs
   - Breaking one component does **not** fail unrelated component suites (isolation)
-  - Integration tests exercise the end-to-end path (benchmark_map scenario)
+  - Integration tests exercise the end-to-end path (instructor maps in `tests/data/instructor/`)
 
 ---
 
@@ -55,8 +55,9 @@ Copy this checklist and verify each item against the live code, output, and docs
 
 - [ ] Run `./build/drone_mapper_simulation tests/data/configs/composition_benchmark.yaml <tmp_out>` locally
 - [ ] Completes in ≤1 min; `simulation_output.yaml` written; `output_results/run_0001/` created
-- [ ] `benchmark_map.npy` (shape `(29, 30, 31)`, ClassicCube-2): voxel values 2, 3, 4, … are treated as `Unmapped` by `Map3DImpl` — not as `Occupied` (see `docs/map3d_impl_contract.md`)
-- [ ] Ex1-ported scenarios 3–5 (`scenarios/composition_scenarioN.yaml`) also complete without timeout
+- [ ] Hidden `uint8` maps (`scenario_house.npy`, `benchmark_map.npy`): stored values `2`, `3`, `4`, `18`, `45`, … read as `Occupied` — not `Unmapped` (see `docs/map3d_impl_contract.md`; regression: `Map3DImpl.StoredValuesGreaterThanOneReadAsOccupied`)
+- [ ] `int8` output maps: `Unmapped` (`-1`) cells remain `Unmapped` on read (regression: `Map3DImpl.Int8UnmappedCellsRemainUnmapped`)
+- [ ] Instructor focused compositions (`tests/data/instructor/compositions/composition_{small_room,big_room,house_lower}.yaml`) complete without timeout; `mission_score >= 90`
 
 ---
 
@@ -142,5 +143,5 @@ Copy this checklist and verify each item against the live code, output, and docs
 - `docs/assignment2-checklist.md` — mandatory requirements
 - `docs/review-error-codes.md` — rubric codes + severities
 - `docs/ex1-mistakes.md` — ex1 deductions to avoid
-- `docs/map3d_impl_contract.md` — benchmark_map format, voxel mapping, .npy dtype rules
+- `docs/map3d_impl_contract.md` — `.npy` dtype rules, uint8 clamp, int8 enum, voxel mapping
 - `readme.txt` — agreed output layout + `simulation_output.yaml` schema

@@ -36,7 +36,7 @@ description: Implements or wires a single Assignment 2 skeleton component with t
 | `MissionControlImpl` | loop `drone_control.step()` until done/max_steps/error |
 | `SimulationRunFactoryImpl` | wire full object graph; set paths via `runOutputMap` / `runErrorLog` from `src/io/`; pass `run_id` from manager |
 | `SimulationManager` | aligned (simulation, mission) pairs × drones × lidars; compute `run_id`; aggregate `SimulationManagerReport`; write `simulation_output.yaml` |
-| `Map3DImpl` | `.npy` load/save; `MapConfig` boundaries/offset/resolution |
+| `Map3DImpl` | `.npy` load/save; `MapConfig` boundaries/offset/resolution; hidden `uint8` read clamp (`>= 1` → Occupied); output `int8` full enum |
 
 ## MappingAlgorithmImpl — contract that must hold
 
@@ -49,7 +49,8 @@ The skeleton's step/`nextStep` model means one scan orientation is emitted per s
 3. Coarse pass orientation count (depends on `el_step_base` × `kCoarsePassAngularScale`) can be as low as ~6 for common configs. Verify it's enough to cover local space.
 4. `MappingAlgorithmFrontier::diagnose` bails immediately if start is not passable → explore/unstick fallback never runs. Fix passability first.
 5. `last_scan_made_progress` gates rescan retries — if pass 1 maps 0 new cells, the algorithm quits even with 99% of the map unknown.
-6. Validate by running `composition_scenario3.yaml` and checking that `mission_score` is meaningfully above 0 and the drone actually traverses the map. CI only checks `score >= 0`.
+6. Validate by running an instructor focused composition and checking that `mission_score >= 90`:
+   `./build/drone_mapper_simulation tests/data/instructor/compositions/composition_small_room.yaml /tmp/out`
 
 See `port-from-ex1` skill for the full behavioral checklist.
 

@@ -38,6 +38,7 @@ When provided: per-map `map_res_cm`, `map_offset`, `map_boundaries` for original
 ## Implementation notes
 
 - Use `IMap3D` / `Map3DImpl` — strong types for bounds and resolution.
+- Scoring reads occupancy through `Map3DImpl::atVoxel`. Reference hidden maps are `uint8` (values `>= 1` → Occupied); drone output maps are `int8` (full `VoxelOccupancy` enum, including `Unmapped`).
 - Different-resolution comparison is **bonus only** — not required for mandatory pass.
 - Port scoring **ideas** from ex1 `Scorer`, not ex1 text-map format.
 

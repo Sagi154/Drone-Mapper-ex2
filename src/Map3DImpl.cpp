@@ -104,7 +104,14 @@ toVoxelIndex(const Position3D& pos, const types::MapConfig& config) {
     return index[0] * (map.Shape()[1] * map.Shape()[2]) + index[1] * map.Shape()[2] + index[2];
 }
 
-[[nodiscard]] types::VoxelOccupancy occupancyFromStored(std::int64_t stored_value) {
+[[nodiscard]] types::VoxelOccupancy occupancyFromUint8Stored(std::uint8_t stored_value) {
+    if (stored_value == 0U) {
+        return types::VoxelOccupancy::Empty;
+    }
+    return types::VoxelOccupancy::Occupied;
+}
+
+[[nodiscard]] types::VoxelOccupancy occupancyFromInt8Stored(std::int64_t stored_value) {
     switch (stored_value) {
     case static_cast<std::int64_t>(types::VoxelOccupancy::PotentiallyOccupied):
     case static_cast<std::int64_t>(types::VoxelOccupancy::OutOfBounds):
@@ -118,13 +125,15 @@ toVoxelIndex(const Position3D& pos, const types::MapConfig& config) {
 }
 
 [[nodiscard]] types::VoxelOccupancy readStoredValue(const NpyArray& map, std::size_t linear_index) {
-    if (map.SizeValueBytes() == 1) {
-        return occupancyFromStored(static_cast<std::int64_t>(map.Data<std::uint8_t>()[linear_index]));
+    if (map.SizeValueBytes() != 1) {
+        return types::VoxelOccupancy::Unmapped;
     }
-    if (map.SizeValueBytes() == sizeof(std::int8_t)) {
-        return occupancyFromStored(static_cast<std::int64_t>(map.Data<std::int8_t>()[linear_index]));
+
+    if (map.Type() == 'u') {
+        return occupancyFromUint8Stored(map.Data<std::uint8_t>()[linear_index]);
     }
-    return types::VoxelOccupancy::Unmapped;
+
+    return occupancyFromInt8Stored(static_cast<std::int64_t>(map.Data<std::int8_t>()[linear_index]));
 }
 
 void writeStoredValue(NpyArray& map, std::size_t linear_index, types::VoxelOccupancy value) {

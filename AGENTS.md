@@ -37,23 +37,36 @@ TAU Advanced Topics in Programming, Assignment 2. Course skeleton is merged at r
 
 ## Test maps
 
-Hidden-map inputs live in `data_maps/` as `uint8` `.npy` (C-order, `0`=Empty, `1`=Occupied). See `docs/map3d_impl_contract.md`.
+Hidden-map inputs are `uint8` `.npy` (C-order). On read, `0` = Empty and any value `>= 1` = Occupied (instructor maps may store `2`, `18`, `45`, etc. in occupied cells — all count as Occupied per course staff). Mutable output maps use `int8` with the full `VoxelOccupancy` enum (`-3` … `1`). See `docs/map3d_impl_contract.md`.
 
-| Map | Origin | Shape | Notes |
-|-----|--------|-------|-------|
-| `benchmark_map.npy` | Instructor skeleton (ClassicCube-2) | `(29, 30, 31)` | Integration benchmark; config `tests/data/configs/sim_benchmark.yaml` |
-| `scenario_3_map.npy` | Ex1 test map, converted | `(11, 11, 9)` | Hollow shell + passages; ex1 scenario 3 layout at 10 cm/voxel |
-| `scenario_4_map.npy` | Ex1 test map, converted | `(16, 16, 16)` | Outer shell + inner partitions; ex1 scenario 4 |
-| `scenario_5_map.npy` | Ex1 test map, converted | `(21, 21, 21)` | Grid maze; ex1 scenario 5 |
+### Instructor integration maps (grading scenarios)
 
-**Ex1-ported scenarios (3–5):** Originally sparse ex1 `map_input.txt` files used for ex1 grading. Converted to valid ex2 hidden maps (`scripts/convert_ex1_scenario.py`) with matching YAML in `scenarios/` (`composition_scenarioN.yaml`, `sim_scenarioN.yaml`, shared drone/mission/lidar configs). Voxel layout matches ex1; coordinates use 10 cm resolution (ex1 integer cells × 10 cm).
+Vendored into `tests/data/instructor/` — use these for integration tests and CI.
+
+| Map | Shape | Used by |
+|-----|-------|---------|
+| `scenario_house.npy` | `(29, 30, 31)` | `house_simulation.yaml` |
+| `scenario_small.npy` | `(20, 20, 20)` | `small_simulation_room.yaml`, `small_simulation_out.yaml` |
+| `scenario_big.npy` | `(30, 30, 30)` | `large_simulation_room.yaml`, `large_simulation_out.yaml` |
+
+All instructor sim configs use `map_resolution_cm: 10`. House sim uses `map_axes_offset.height_offset: 150`.
+
+- Full composition: `tests/data/instructor/sim_compose.yaml` (6 aligned pairs × 2 drones × 2 lidars = 24 runs)
+- Focused compositions (integration/CI): `tests/data/instructor/compositions/composition_{small_room,big_room,house_lower}.yaml`
+- Path helpers: `test_support::instructorInputsDir()`, `loadInstructorFocusedComposition()` in `tests/support/ConfigFixtures.hpp`
 
 Run locally:
+
 ```bash
-./build/drone_mapper_simulation scenarios/composition_scenario3.yaml /tmp/out3
+./build/drone_mapper_simulation tests/data/instructor/compositions/composition_small_room.yaml /tmp/instructor_small
+grep mission_score /tmp/instructor_small/simulation_output.yaml
 ```
 
-CI: the `docker-build-test` job in `.github/workflows/ci.yml` runs all three via Docker after unit tests; scores are printed in the **Check scenario mission scores** step log.
+CI: the `docker-build-test` job runs focused compositions after unit tests; scores are printed in the **Check instructor composition mission scores** step log.
+
+### Dev/unit-test maps (`data_maps/`)
+
+Small golden maps (`single_voxel_*.npy`, etc.) and `benchmark_map.npy` for component tests. `benchmark_map.npy` is byte-identical to `scenario_house.npy`. Do **not** substitute these for instructor scenarios in integration grading.
 
 ## Build and run
 

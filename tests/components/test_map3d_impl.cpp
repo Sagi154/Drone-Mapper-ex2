@@ -44,6 +44,15 @@ namespace {
     return map;
 }
 
+[[nodiscard]] std::shared_ptr<NpyArray> makeUint8InputMap(const NpyArray::shape_t& shape,
+                                                          std::uint8_t fill_value) {
+    auto map = std::make_shared<NpyArray>(shape, sizeof(std::uint8_t),
+                                          NpyArray::GetTypeChar(typeid(std::uint8_t)));
+    map->Allocate();
+    std::fill_n(map->Data<std::uint8_t>(), map->NumValue(), fill_value);
+    return map;
+}
+
 [[nodiscard]] std::filesystem::path goldenMapPath() {
 #ifdef DRONE_MAPPER_SOURCE_DIR
     return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR} / "data_maps" / "single_voxel_x2_y4_z2.npy";
@@ -116,6 +125,23 @@ TEST(Map3DImpl, DerivesBoundsFromShapeWhenUnset) {
     EXPECT_EQ(derived.boundaries.max_x, 40.0 * x_extent[cm]);
     EXPECT_EQ(derived.boundaries.max_y, 40.0 * y_extent[cm]);
     EXPECT_EQ(derived.boundaries.max_height, 40.0 * z_extent[cm]);
+}
+
+TEST(Map3DImpl, StoredValuesGreaterThanOneReadAsOccupied) {
+    const Position3D voxel{0.0 * x_extent[cm], 0.0 * y_extent[cm], 0.0 * z_extent[cm]};
+    for (const std::uint8_t value : {2, 3, 4, 18, 45}) {
+        const auto map = makeUint8InputMap(NpyArray::shape_t{1, 1, 1}, value);
+        const Map3DImpl map_impl{map, makeUnitCubeConfig()};
+        EXPECT_EQ(map_impl.atVoxel(voxel), types::VoxelOccupancy::Occupied)
+            << "stored value=" << static_cast<int>(value);
+    }
+}
+
+TEST(Map3DImpl, Int8UnmappedCellsRemainUnmapped) {
+    const auto map = makeEmptyMutableMap(NpyArray::shape_t{1, 1, 1});
+    const Map3DImpl map_impl{map, makeUnitCubeConfig()};
+    const Position3D voxel{0.0 * x_extent[cm], 0.0 * y_extent[cm], 0.0 * z_extent[cm]};
+    EXPECT_EQ(map_impl.atVoxel(voxel), types::VoxelOccupancy::Unmapped);
 }
 
 } // namespace drone_mapper
