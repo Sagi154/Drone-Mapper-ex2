@@ -8,6 +8,7 @@
 #include <drone_mapper/MockLidar.h>
 #include <drone_mapper/MockMovement.h>
 #include <drone_mapper/SimulationRunImpl.h>
+#include <drone_mapper/io/PathResolver.h>
 #include <drone_mapper/io/RunErrorLog.h>
 #include <drone_mapper/io/RunPathHelpers.h>
 
@@ -90,23 +91,6 @@ namespace {
     return map;
 }
 
-[[nodiscard]] std::filesystem::path resolveMapPath(const std::filesystem::path& map_filename) {
-    if (map_filename.empty()) {
-        return map_filename;
-    }
-    if (std::filesystem::exists(map_filename)) {
-        return map_filename;
-    }
-    if (map_filename.is_absolute()) {
-        return map_filename;
-    }
-    const std::filesystem::path relative_to_cwd = std::filesystem::current_path() / map_filename;
-    if (std::filesystem::exists(relative_to_cwd)) {
-        return relative_to_cwd;
-    }
-    return map_filename;
-}
-
 struct HiddenMapLoadResult {
     std::unique_ptr<Map3DImpl> map;
     std::optional<types::ErrorRef> error;
@@ -132,7 +116,7 @@ void appendConfigLoadErrors(const types::SimulationConfigData& simulation,
 }
 
 [[nodiscard]] HiddenMapLoadResult loadHiddenMap(const types::SimulationConfigData& simulation) {
-    const std::filesystem::path map_path = resolveMapPath(simulation.map_filename);
+    const std::filesystem::path map_path = io::resolveMapFilename(simulation.map_filename);
     auto map_array = std::make_shared<NpyArray>();
     const LPCSTR load_error = map_array->LoadNPY(map_path.string());
     if (load_error != nullptr) {

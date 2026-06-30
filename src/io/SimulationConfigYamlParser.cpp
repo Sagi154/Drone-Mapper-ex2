@@ -1,4 +1,5 @@
 #include <drone_mapper/io/YamlConfigParsers.h>
+#include <drone_mapper/io/PathResolver.h>
 
 #include "YamlParseUtil.hpp"
 
@@ -17,7 +18,8 @@ types::SimulationConfigData parseSimulationConfig(const std::filesystem::path& p
     const YAML::Node node = detail::configRoot(*root, "simulation_config");
 
     if (const YAML::Node map_filename = node["map_filename"]; map_filename && map_filename.IsScalar()) {
-        config.map_filename = map_filename.as<std::string>();
+        config.map_filename =
+            resolveMapFilename(map_filename.as<std::string>(), path);
     }
 
     if (const auto map_resolution = detail::readLengthCm(node, "map_resolution_cm")) {
@@ -32,8 +34,10 @@ types::SimulationConfigData parseSimulationConfig(const std::filesystem::path& p
         config.initial_angle = *angle;
     }
 
-    if (const auto offset = detail::readMapOffset(node["map_offset"])) {
-        config.map_offset = *offset;
+    if (const auto map_offset = detail::readMapOffset(node["map_offset"])) {
+        config.map_offset = *map_offset;
+    } else if (const auto axes_offset = detail::readMapOffset(node["map_axes_offset"])) {
+        config.map_offset = *axes_offset;
     }
 
     return config;
