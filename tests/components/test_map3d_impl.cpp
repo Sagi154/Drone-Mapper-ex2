@@ -137,4 +137,11 @@ TEST(Map3DImpl, StoredValuesGreaterThanOneReadAsOccupied) {
     }
 }
 
+TEST(Map3DImpl, Int8UnmappedCellsRemainUnmapped) {
+    const auto map = makeEmptyMutableMap(NpyArray::shape_t{1, 1, 1});
+    const Map3DImpl map_impl{map, makeUnitCubeConfig()};
+    const Position3D voxel{0.0 * x_extent[cm], 0.0 * y_extent[cm], 0.0 * z_extent[cm]};
+    EXPECT_EQ(map_impl.atVoxel(voxel), types::VoxelOccupancy::Unmapped);
+}
+
 } // namespace drone_mapper
