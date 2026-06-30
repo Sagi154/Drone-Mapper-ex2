@@ -113,7 +113,9 @@ toVoxelIndex(const Position3D& pos, const types::MapConfig& config) {
     case static_cast<std::int64_t>(types::VoxelOccupancy::Occupied):
         return static_cast<types::VoxelOccupancy>(stored_value);
     default:
-        return types::VoxelOccupancy::Unmapped;
+        return stored_value > static_cast<std::int64_t>(types::VoxelOccupancy::Occupied)
+                   ? types::VoxelOccupancy::Occupied
+                   : types::VoxelOccupancy::Unmapped;
     }
 }
 
