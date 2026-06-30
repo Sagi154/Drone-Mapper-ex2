@@ -37,6 +37,7 @@ If `MappingBounds` are unset (all zero), they are derived from array shape, offs
 
 - Hidden maps load as `uint8` (`0` = Empty, `1` = Occupied).
 - Mutable output maps may use `int8` to store full `VoxelOccupancy` values.
+- On read, any stored value `>= 1` is treated as `Occupied` (see clamp rule below).
 - `save(path)` writes the backing `NpyArray` via TinyNPY `SaveNPY`.
 
 ## Reference map (canonical format)
@@ -47,7 +48,7 @@ All hidden-map `.npy` files use the same on-disk format:
 - shape: 3D `(nx, ny, nz)` — x=dim0, y=dim1, z=dim2, C-order
 - values: `0` = Empty, `1` = Occupied for student-authored fixtures
 
-`Map3DImpl` treats only `0`/`1` as Empty/Occupied; other stored bytes map to `Unmapped`.
+`Map3DImpl` treats `0` as Empty and any value `>= 1` as Occupied — instructor-provided maps may encode extra information (e.g. `2`, `18`, `45`) in occupied cells; per course staff clarification, any such value still means Occupied. Unrecognized negative values map to `Unmapped`.
 
 ## Instructor integration maps
 
