@@ -134,4 +134,26 @@ private:
     return result;
 }
 
+[[nodiscard]] inline std::filesystem::path instructorInputsDir() {
+#ifdef DRONE_MAPPER_SOURCE_DIR
+    return std::filesystem::path{DRONE_MAPPER_SOURCE_DIR} / "tests" / "data" / "instructor";
+#else
+    return std::filesystem::path{"tests/data/instructor"};
+#endif
+}
+
+[[nodiscard]] inline std::filesystem::path instructorCompositionPath(const std::string& filename) {
+    return instructorInputsDir() / "compositions" / filename;
+}
+
+[[nodiscard]] inline io::ConfigParseResult<types::SimulationCompositionData> loadInstructorComposition(
+    io::IRunErrorLog& log) {
+    return io::parseCompositionFile(instructorInputsDir() / "sim_compose.yaml", log);
+}
+
+[[nodiscard]] inline io::ConfigParseResult<types::SimulationCompositionData>
+loadInstructorFocusedComposition(const std::string& filename, io::IRunErrorLog& log) {
+    return io::parseCompositionFile(instructorCompositionPath(filename), log);
+}
+
 } // namespace drone_mapper::test_support
