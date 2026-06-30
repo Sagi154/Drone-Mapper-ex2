@@ -178,6 +178,45 @@ public:
     return manager.run(composition, output_path);
 }
 
+// Parse a focused instructor composition, run it end-to-end, and assert:
+//   • 1 run, no errors in error.log
+//   • mission_score >= 90
+//   • wall-clock elapsed < 60 s
+// Caller owns creation/removal of output_path to allow unique names per test.
+void runInstructorCompositionIntegration(const std::string& composition_filename,
+                                         const std::filesystem::path& output_path) {
+    test_support::CapturingErrorLog log;
+    const io::ConfigParseResult<types::SimulationCompositionData> composition_result =
+        test_support::loadInstructorFocusedComposition(composition_filename, log);
+    ASSERT_TRUE(composition_result.ok)
+        << "Failed to load instructor composition: " << composition_filename;
+    EXPECT_TRUE(log.entries().empty())
+        << "Parse errors for " << composition_filename;
+    ASSERT_EQ(composition_result.value.missions.size(), 1U)
+        << "Focused composition must have exactly 1 mission pair";
+
+    removeDirectory(output_path);
+
+    const auto start = std::chrono::steady_clock::now();
+    const types::SimulationManagerReport report =
+        runComposition(composition_result.value, output_path);
+    const auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+        std::chrono::steady_clock::now() - start);
+
+    ASSERT_EQ(report.runs.size(), 1U);
+    ASSERT_EQ(report.runs.front().mission_results.size(), 1U);
+    EXPECT_NE(report.runs.front().mission_results.front().status, types::MissionRunStatus::Error)
+        << "Mission reported Error status for " << composition_filename;
+    EXPECT_GE(report.runs.front().mission_score, 90.0)
+        << composition_filename << " scored below 90";
+    EXPECT_TRUE(readAllLines(io::runErrorLog(output_path, 1)).empty())
+        << "Unexpected entries in error.log for " << composition_filename;
+    EXPECT_LT(elapsed.count(), 60)
+        << composition_filename << " exceeded 60 s time budget";
+
+    removeDirectory(output_path);
+}
+
 } // namespace
 
 // Scenario: instructor benchmark map with real MappingAlgorithmImpl via SimulationManager.
@@ -259,6 +298,50 @@ TEST(Integration, MockAlgorithm_FullRun_CompletesWithScore) {
     EXPECT_TRUE(readAllLines(io::runErrorLog(output_path, 1)).empty());
 
     removeDirectory(output_path);
+}
+
+// Scenario: instructor small_room focused composition (scenario_small.npy, 20×20×20, 1 run).
+// Expected: mission_score >= 90, no errors, completes within 60 s.
+TEST(Integration, InstructorSmallRoom_AchievesTargetScore) {
+    runInstructorCompositionIntegration(
+        "composition_small_room.yaml",
+        std::filesystem::temp_directory_path() / "integration_instructor_small_room");
+}
+
+// Scenario: instructor big_room focused composition (scenario_big.npy, 30×30×30, 1 run).
+// Expected: mission_score >= 90, no errors, completes within 60 s.
+TEST(Integration, InstructorBigRoom_AchievesTargetScore) {
+    runInstructorCompositionIntegration(
+        "composition_big_room.yaml",
+        std::filesystem::temp_directory_path() / "integration_instructor_big_room");
+}
+
+// Scenario: instructor house_lower focused composition (scenario_house.npy, 29×30×31, 1 run).
+// Validates map_axes_offset (height_offset: 150 cm) applied end-to-end: drone starts in the
+// lower volume, not at world Z = 0 inside the floor.
+// Expected: mission_score >= 90, no errors, completes within 60 s.
+TEST(Integration, InstructorHouseLower_AchievesTargetScore) {
+    runInstructorCompositionIntegration(
+        "composition_house_lower.yaml",
+        std::filesystem::temp_directory_path() / "integration_instructor_house_lower");
+}
+
+// Scenario: parse full sim_compose.yaml (24 runs) — no execution.
+// Expected: 6 aligned simulation/mission pairs, 2 drones, 2 lidars → 24 total runs.
+TEST(Integration, InstructorCompose_ParsesTwentyFourRuns) {
+    test_support::CapturingErrorLog log;
+    const io::ConfigParseResult<types::SimulationCompositionData> result =
+        test_support::loadInstructorComposition(log);
+    ASSERT_TRUE(result.ok) << "Failed to parse sim_compose.yaml";
+    EXPECT_TRUE(log.entries().empty());
+
+    const types::SimulationCompositionData& comp = result.value;
+    EXPECT_EQ(comp.simulations.size(), 6U) << "Expected 6 aligned simulation configs";
+    EXPECT_EQ(comp.missions.size(), 6U) << "Expected 6 aligned mission configs";
+    EXPECT_EQ(comp.drones.size(), 2U) << "Expected 2 drone configs";
+    EXPECT_EQ(comp.lidars.size(), 2U) << "Expected 2 lidar configs";
+    EXPECT_EQ(comp.missions.size() * comp.drones.size() * comp.lidars.size(), 24U)
+        << "6 pairs × 2 drones × 2 lidars should expand to 24 runs";
 }
 
 } // namespace drone_mapper
