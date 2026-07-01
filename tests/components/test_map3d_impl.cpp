@@ -129,7 +129,10 @@ TEST(Map3DImpl, DerivesBoundsFromShapeWhenUnset) {
 
 TEST(Map3DImpl, StoredValuesGreaterThanOneReadAsOccupied) {
     const Position3D voxel{0.0 * x_extent[cm], 0.0 * y_extent[cm], 0.0 * z_extent[cm]};
-    for (const std::uint8_t value : {2, 3, 4, 18, 45}) {
+    for (const std::uint8_t value :
+         {static_cast<std::uint8_t>(2), static_cast<std::uint8_t>(3),
+          static_cast<std::uint8_t>(4), static_cast<std::uint8_t>(18),
+          static_cast<std::uint8_t>(45)}) {
         const auto map = makeUint8InputMap(NpyArray::shape_t{1, 1, 1}, value);
         const Map3DImpl map_impl{map, makeUnitCubeConfig()};
         EXPECT_EQ(map_impl.atVoxel(voxel), types::VoxelOccupancy::Occupied)

@@ -76,10 +76,7 @@ toVoxelIndex(const Position3D& pos, const types::MapConfig& config) {
             return std::nullopt;
         }
         const double raw_index = relative_cm / resolution_cm;
-        const auto index = static_cast<std::size_t>(raw_index);
-        if (std::fabs(raw_index - static_cast<double>(index)) > 1e-9) {
-            return std::nullopt;
-        }
+        const auto index = static_cast<std::size_t>(std::floor(raw_index + 1e-9));
         return index;
     };
 
