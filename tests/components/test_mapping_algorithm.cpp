@@ -438,4 +438,57 @@ TEST(MappingAlgorithmTest, AcceptsNonNullLatestScanWithoutChangingFirstScanReque
     ASSERT_TRUE(cmd.scan_orientation.has_value());
 }
 
+// What: scan commands from the redesigned algorithm.
+// Expected: fusion_max is never set — DroneControl uses full lidar range.
+TEST(MappingAlgorithmTest, NoFusionMaxEmittedInScanCommand) {
+    const types::MapConfig config = makeCorridorConfig();
+    Map3DImpl output_map{makeEmptyMap(NpyArray::shape_t{11, 11, 11}), config};
+    fillEmptyBox(output_map, 4, 6, 4, 6, 4, 6, config);
+
+    MappingAlgorithmImpl algorithm{
+        makeMissionConfig(), makeLidarConfig(), makeDroneConfig(), output_map};
+
+    const types::DroneState state{
+        gridPoint(5, 5, 5, config), Orientation{0.0 * deg, 0.0 * deg}, 0};
+
+    for (int step = 0; step < 30; ++step) {
+        const types::MappingStepCommand cmd = algorithm.nextStep(state, nullptr);
+        if (cmd.scan_orientation.has_value()) {
+            EXPECT_FALSE(cmd.fusion_max.has_value());
+        }
+        if (cmd.status != types::AlgorithmStatus::Working) {
+            break;
+        }
+    }
+}
+
+// What: corridor with unknown space beyond the fused empty region.
+// Expected: algorithm keeps working through scan + explore/rescan instead of quitting early.
+TEST(MappingAlgorithmTest, DoesNotTerminatePrematurely) {
+    const types::MapConfig config = makeCorridorConfig();
+    Map3DImpl output_map{makeEmptyMap(NpyArray::shape_t{11, 3, 3}), config};
+    fillEmptyBox(output_map, 0, 4, 0, 2, 0, 2, config);
+
+    MappingAlgorithmImpl algorithm{
+        makeMissionConfig(), makeLidarConfig(), makeDroneConfig(), output_map};
+
+    const types::DroneState state{
+        gridPoint(2, 1, 1, config), Orientation{0.0 * deg, 0.0 * deg}, 0};
+
+    int working_steps = 0;
+    for (int step = 0; step < 100; ++step) {
+        const types::MappingStepCommand cmd = algorithm.nextStep(state, nullptr);
+        if (cmd.status == types::AlgorithmStatus::Working) {
+            ++working_steps;
+            continue;
+        }
+        if (cmd.status == types::AlgorithmStatus::Finished ||
+            cmd.status == types::AlgorithmStatus::FinishedWithUnmappableVoxels) {
+            break;
+        }
+    }
+
+    EXPECT_GT(working_steps, 26);
+}
+
 } // namespace drone_mapper
