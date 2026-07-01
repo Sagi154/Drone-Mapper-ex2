@@ -5,9 +5,10 @@
 
 #include <drone_mapper/ScanResultToVoxels.h>
 
+#include <mp-units/systems/si/math.h>
+
 #include <cmath>
 #include <limits>
-#include <mp-units/systems/si/math.h>
 #include <utility>
 
 namespace drone_mapper {
@@ -83,6 +84,45 @@ void markDroneFootprintEmpty(IMutableMap3D& map,
     return types::MovementResult{false, "Unsupported movement command."};
 }
 
+[[nodiscard]] bool isRecoverableMovementFailure(const std::string& message) {
+    return message.find("blocked") != std::string::npos ||
+           message.find("boundary") != std::string::npos;
+}
+
+[[nodiscard]] bool isMissDistance(PhysicalLength distance) {
+    return distance.force_numerical_value_in(cm) == std::numeric_limits<double>::max();
+}
+
+// ex1 proximity fusion: ignore too-close hits, drop hits beyond fusion_max, cap
+// miss-ray empty marking via a reduced z_max passed to ScanResultToVoxels.
+[[nodiscard]] types::LidarScanResult filterScanForFusion(
+    const types::LidarScanResult& scan, PhysicalLength fusion_max) {
+    types::LidarScanResult filtered;
+    filtered.reserve(scan.size());
+    for (const types::LidarHit& hit : scan) {
+        if (hit.distance == 0.0 * cm) {
+            continue;
+        }
+        if (isMissDistance(hit.distance)) {
+            filtered.push_back(hit);
+            continue;
+        }
+        if (hit.distance <= fusion_max) {
+            filtered.push_back(hit);
+        }
+    }
+    return filtered;
+}
+
+[[nodiscard]] types::LidarConfigData lidarConfigForFusion(
+    const types::LidarConfigData& lidar, PhysicalLength fusion_max) {
+    types::LidarConfigData fusion_lidar = lidar;
+    if (fusion_max < fusion_lidar.z_max) {
+        fusion_lidar.z_max = fusion_max;
+    }
+    return fusion_lidar;
+}
+
 [[nodiscard]] Orientation absoluteBeamOrientation(const Orientation& drone_heading,
                                                   const Orientation& relative_beam) {
     return Orientation{
@@ -111,19 +151,6 @@ void markDroneFootprintEmpty(IMutableMap3D& map,
     };
 }
 
-[[nodiscard]] double normalProximityMaxCm(const types::DroneConfigData& drone,
-                                          const types::LidarConfigData& lidar,
-                                          const types::MapConfig& config) {
-    const double radius_cm = drone.radius.force_numerical_value_in(cm);
-    const double cell_cm = config.resolution.force_numerical_value_in(cm);
-    const double z_max_cm = lidar.z_max.force_numerical_value_in(cm);
-    if (cell_cm <= 0.0) {
-        return z_max_cm;
-    }
-    const double normal_cm = (std::ceil(radius_cm / cell_cm) + 1.0) * cell_cm;
-    return std::min(z_max_cm, normal_cm);
-}
-
 void setEmptyIfNotOccupied(IMutableMap3D& map, const Position3D& position) {
     if (!map.isInBounds(position)) {
         return;
@@ -140,48 +167,45 @@ void setOccupied(IMutableMap3D& map, const Position3D& position) {
     map.set(position, types::VoxelOccupancy::Occupied);
 }
 
-// Ex1 fused lidar hits on grid-aligned steps (ray_step = cell size). ScanResultToVoxels
-// is still called first per skeleton contract; this supplements empty paths that the
-// sub-voxel march cannot write because Map3DImpl only accepts voxel-centre positions.
-void supplementGridAlignedScanFusion(IMutableMap3D& output_map,
-                                     const Position3D& scan_origin,
-                                     const Orientation& drone_heading,
-                                     const types::LidarScanResult& scan,
-                                     double fusion_max_cm) {
-    const double grid_step_cm = output_map.getMapConfig().resolution.force_numerical_value_in(cm);
-    if (grid_step_cm <= 0.0) {
+// ex1 applyLidarHitsToMap uses map-resolution steps along each beam so grid centres
+// inside the proximity bubble are marked; ScanResultToVoxels alone can miss them.
+void supplementGridAlignedFusion(IMutableMap3D& map,
+                                 const Position3D& scan_origin,
+                                 const Orientation& drone_heading,
+                                 const types::LidarScanResult& scan,
+                                 PhysicalLength fusion_max) {
+    const double step_cm = map.getMapConfig().resolution.force_numerical_value_in(cm);
+    if (step_cm <= 0.0) {
         return;
     }
-
-    constexpr double kMissDistance = std::numeric_limits<double>::max();
+    const double fusion_max_cm = fusion_max.force_numerical_value_in(cm);
 
     for (const types::LidarHit& hit : scan) {
-        const Orientation beam_orientation = absoluteBeamOrientation(drone_heading, hit.angle);
-        const double distance_cm = hit.distance.force_numerical_value_in(cm);
+        if (hit.distance == 0.0 * cm) {
+            continue;
+        }
 
-        if (distance_cm == kMissDistance) {
-            for (double t_cm = grid_step_cm; t_cm <= fusion_max_cm + 1e-9; t_cm += grid_step_cm) {
+        const Orientation beam_orientation =
+            absoluteBeamOrientation(drone_heading, hit.angle);
+
+        if (isMissDistance(hit.distance)) {
+            for (double t_cm = step_cm; t_cm <= fusion_max_cm + 1e-9; t_cm += step_cm) {
                 setEmptyIfNotOccupied(
-                    output_map, pointAlongBeam(scan_origin, beam_orientation, t_cm * cm));
+                    map, pointAlongBeam(scan_origin, beam_orientation, t_cm * cm));
             }
             continue;
         }
 
-        if (distance_cm == 0.0 || distance_cm > fusion_max_cm) {
+        const double hit_cm = hit.distance.force_numerical_value_in(cm);
+        if (hit_cm > fusion_max_cm) {
             continue;
         }
-
-        for (double t_cm = grid_step_cm; t_cm < distance_cm + 1e-9; t_cm += grid_step_cm) {
+        for (double t_cm = step_cm; t_cm < hit_cm - 1e-9; t_cm += step_cm) {
             setEmptyIfNotOccupied(
-                output_map, pointAlongBeam(scan_origin, beam_orientation, t_cm * cm));
+                map, pointAlongBeam(scan_origin, beam_orientation, t_cm * cm));
         }
-        setOccupied(output_map, pointAlongBeam(scan_origin, beam_orientation, hit.distance));
+        setOccupied(map, pointAlongBeam(scan_origin, beam_orientation, hit.distance));
     }
-}
-
-[[nodiscard]] bool isRecoverableMovementFailure(const std::string& message) {
-    return message.find("blocked") != std::string::npos ||
-           message.find("boundary") != std::string::npos;
 }
 
 } // namespace
@@ -208,12 +232,46 @@ types::DroneStepResult DroneControlImpl::step() {
     markDroneFootprintEmpty(output_map_, current_state.position, drone_.radius);
 
     const types::LidarScanResult* latest_scan_ptr = has_latest_scan_ ? &latest_scan_ : nullptr;
-    const types::MappingStepCommand command =
+    types::MappingStepCommand command =
         mapping_algorithm_.nextStep(current_state, latest_scan_ptr);
 
     if (command.status == types::AlgorithmStatus::Finished ||
         command.status == types::AlgorithmStatus::FinishedWithUnmappableVoxels) {
         return types::DroneStepResult{types::DroneStepStatus::Completed, {}};
+    }
+
+    // ex1 performs a full spherical sweep in one tick; batch consecutive scan
+    // commands into a single mission step so step budget is not spent on aiming.
+    while (command.scan_orientation.has_value() &&
+           command.status == types::AlgorithmStatus::Working) {
+        latest_scan_ = lidar_sensor_.scan(*command.scan_orientation);
+        has_latest_scan_ = true;
+        if (command.fusion_max.has_value()) {
+            const types::LidarConfigData fusion_lidar =
+                lidarConfigForFusion(lidar_, *command.fusion_max);
+            const types::LidarScanResult fusion_scan =
+                filterScanForFusion(latest_scan_, *command.fusion_max);
+            ScanResultToVoxels::applyToMap(
+                output_map_, gps_.position(), gps_.heading(), fusion_scan, fusion_lidar);
+            supplementGridAlignedFusion(
+                output_map_, gps_.position(), gps_.heading(), fusion_scan, *command.fusion_max);
+        } else {
+            ScanResultToVoxels::applyToMap(
+                output_map_, gps_.position(), gps_.heading(), latest_scan_, lidar_);
+            supplementGridAlignedFusion(
+                output_map_, gps_.position(), gps_.heading(), latest_scan_, lidar_.z_max);
+        }
+        markDroneFootprintEmpty(output_map_, gps_.position(), drone_.radius);
+
+        const types::DroneState post_scan_state = state();
+        latest_scan_ptr = &latest_scan_;
+        command = mapping_algorithm_.nextStep(post_scan_state, latest_scan_ptr);
+
+        if (command.status == types::AlgorithmStatus::Finished ||
+            command.status == types::AlgorithmStatus::FinishedWithUnmappableVoxels) {
+            ++step_index_;
+            return types::DroneStepResult{types::DroneStepStatus::Completed, {}};
+        }
     }
 
     if (command.movement.has_value()) {
@@ -235,17 +293,6 @@ types::DroneStepResult DroneControlImpl::step() {
                 movement_result.message.empty() ? "Movement failed." : movement_result.message,
             };
         }
-    }
-
-    if (command.scan_orientation.has_value()) {
-        latest_scan_ = lidar_sensor_.scan(*command.scan_orientation);
-        has_latest_scan_ = true;
-        ScanResultToVoxels::applyToMap(
-            output_map_, gps_.position(), gps_.heading(), latest_scan_, lidar_);
-        const double fusion_max_cm =
-            normalProximityMaxCm(drone_, lidar_, output_map_.getMapConfig());
-        supplementGridAlignedScanFusion(
-            output_map_, gps_.position(), gps_.heading(), latest_scan_, fusion_max_cm);
     }
 
     ++step_index_;
