@@ -49,6 +49,9 @@ struct MappingStepCommand {
     // Valid to provide both - if both are provided, movement must be performed before scan.
     std::optional<MovementCommand> movement{};
     std::optional<Orientation> scan_orientation{};
+    // Local lidar fusion cap for this shot (ex1 proximity_max). When set, only
+    // observations within this range are written to the output map.
+    std::optional<PhysicalLength> fusion_max{};
     AlgorithmStatus status = AlgorithmStatus::Working;
 };
 
