@@ -1,13 +1,12 @@
 // MappingAlgorithmImpl.cpp
-// Frontier exploration state machine ported from ex1 DroneAlgorithm.
-// Emits scan orientations and movement commands for DroneControlImpl to execute.
+// Frontier exploration: full-range 26-direction scan + BFS frontier planning.
 
 #include <drone_mapper/MappingAlgorithmImpl.h>
 
 #include "MappingAlgorithmFrontier.h"
 
-#include <algorithm>
-#include <array>
+#include <drone_mapper/IMutableMap3D.h>
+
 #include <cmath>
 #include <numbers>
 #include <optional>
@@ -18,38 +17,11 @@ namespace drone_mapper {
 
 namespace {
 
-enum class ProximityMode {
-    Normal,
-    Expanded,
-};
-
 constexpr double kHalfStepTolerance = 0.5;
-constexpr double kCoarsePassAngularScale = 2.0;
-constexpr double kBeamLatticeHalfOffset = 0.5;
 constexpr double kPositionEpsilon = 1e-6;
-constexpr double kExpandedProximityRadiusFactor = 2.0;
 
 [[nodiscard]] double gridStepCm(const types::MapConfig& config) {
     return config.resolution.force_numerical_value_in(cm);
-}
-
-[[nodiscard]] double computeProximityMaxCm(const types::DroneConfigData& drone,
-                                           const types::LidarConfigData& lidar,
-                                           const types::MapConfig& map_config,
-                                           ProximityMode mode,
-                                           int expanded_rescue_pass) {
-    const double radius_cm = drone.radius.force_numerical_value_in(cm);
-    const double z_max_cm = lidar.z_max.force_numerical_value_in(cm);
-    const double cell_cm = gridStepCm(map_config);
-    const double normal_cm = (std::ceil(radius_cm / cell_cm) + 1.0) * cell_cm;
-    if (mode == ProximityMode::Normal) {
-        return std::min(z_max_cm, normal_cm);
-    }
-    const int pass = std::max(1, expanded_rescue_pass);
-    const double expanded_cm =
-        (kExpandedProximityRadiusFactor * radius_cm) +
-        (static_cast<double>(pass - 1) * radius_cm);
-    return std::min(z_max_cm, expanded_cm);
 }
 
 } // namespace
@@ -60,9 +32,6 @@ struct MappingAlgorithmImpl::Impl {
 
     std::vector<Orientation> scan_orientations{};
     std::size_t scan_index = 0;
-    int scan_pass = 0;
-    bool last_scan_made_progress = true;
-    std::size_t cells_before_scan = 0;
 
     std::vector<Position3D> current_path{};
     std::size_t path_index = 0;
@@ -72,6 +41,7 @@ struct MappingAlgorithmImpl::Impl {
 
     std::unordered_set<detail::GridKey, detail::GridKeyHash> blocked_cells{};
     bool finished = false;
+    IMutableMap3D* mutable_output = nullptr;
 };
 
 MappingAlgorithmImpl::~MappingAlgorithmImpl() = default;
@@ -81,99 +51,78 @@ MappingAlgorithmImpl::MappingAlgorithmImpl(const types::MissionConfigData& missi
                                            const types::DroneConfigData& drone_config,
                                            const IMap3D& output_map)
     : IMappingAlgorithm(mission_config, lidar_config, drone_config, output_map),
-      impl_(std::make_unique<Impl>()) {}
-
-std::size_t MappingAlgorithmImpl::countMappedCells() const {
-    const types::MapConfig config = output_map_.getMapConfig();
-    const double step = gridStepCm(config);
-    if (step <= 0.0) {
-        return 0;
-    }
-    const types::MappingBounds& bounds = config.boundaries;
-
-    const double min_x = bounds.min_x.force_numerical_value_in(cm);
-    const double max_x = bounds.max_x.force_numerical_value_in(cm);
-    const double min_y = bounds.min_y.force_numerical_value_in(cm);
-    const double max_y = bounds.max_y.force_numerical_value_in(cm);
-    const double min_z = bounds.min_height.force_numerical_value_in(cm);
-    const double max_z = bounds.max_height.force_numerical_value_in(cm);
-
-    std::size_t count = 0;
-    for (double x = min_x; x <= max_x + 1e-9; x += step) {
-        for (double y = min_y; y <= max_y + 1e-9; y += step) {
-            for (double z = min_z; z <= max_z + 1e-9; z += step) {
-                const Position3D pos{x * x_extent[cm], y * y_extent[cm], z * z_extent[cm]};
-                if (!output_map_.isInBounds(pos)) {
-                    continue;
-                }
-                if (output_map_.atVoxel(pos) != types::VoxelOccupancy::Unmapped) {
-                    ++count;
-                }
-            }
-        }
-    }
-    return count;
+      impl_(std::make_unique<Impl>()) {
+    impl_->mutable_output =
+        dynamic_cast<IMutableMap3D*>(const_cast<IMap3D*>(&output_map));
 }
 
-void MappingAlgorithmImpl::buildScanOrientations() {
+void MappingAlgorithmImpl::buildScanOrientations(const Orientation& heading) {
     impl_->scan_orientations.clear();
+    impl_->scan_orientations.reserve(26);
 
-    if (impl_->scan_pass == 0) {
-        static constexpr std::array<std::pair<double, double>, 6> kAxisAligned = {{
-            {0.0, 0.0},
-            {180.0, 0.0},
-            {90.0, 0.0},
-            {270.0, 0.0},
-            {0.0, 90.0},
-            {0.0, -90.0},
-        }};
-        for (const auto& [az, el] : kAxisAligned) {
-            impl_->scan_orientations.push_back(Orientation{az * deg, el * deg});
+    const auto addDirection = [&](double dx, double dy, double dz) {
+        const double len = std::sqrt(dx * dx + dy * dy + dz * dz);
+        if (len < 1e-9) {
+            return;
+        }
+        dx /= len;
+        dy /= len;
+        dz /= len;
+
+        const double az_deg = std::atan2(dy, dx) * (180.0 / std::numbers::pi);
+        const double horiz_len = std::sqrt(dx * dx + dy * dy);
+        const double el_deg = std::atan2(dz, horiz_len) * (180.0 / std::numbers::pi);
+
+        double az_norm = az_deg;
+        while (az_norm < 0.0) {
+            az_norm += 360.0;
+        }
+        while (az_norm >= 360.0) {
+            az_norm -= 360.0;
+        }
+
+        impl_->scan_orientations.push_back(
+            Orientation{az_norm * deg - heading.horizontal, el_deg * deg - heading.altitude});
+    };
+
+    addDirection(1.0, 0.0, 0.0);
+    addDirection(-1.0, 0.0, 0.0);
+    addDirection(0.0, 1.0, 0.0);
+    addDirection(0.0, -1.0, 0.0);
+    addDirection(0.0, 0.0, 1.0);
+    addDirection(0.0, 0.0, -1.0);
+
+    const double inv_sqrt2 = 1.0 / std::sqrt(2.0);
+    for (const int sx : {-1, 1}) {
+        for (const int sy : {-1, 1}) {
+            addDirection(static_cast<double>(sx) * inv_sqrt2,
+                         static_cast<double>(sy) * inv_sqrt2,
+                         0.0);
+        }
+    }
+    for (const int sx : {-1, 1}) {
+        for (const int sz : {-1, 1}) {
+            addDirection(static_cast<double>(sx) * inv_sqrt2,
+                         0.0,
+                         static_cast<double>(sz) * inv_sqrt2);
+        }
+    }
+    for (const int sy : {-1, 1}) {
+        for (const int sz : {-1, 1}) {
+            addDirection(0.0,
+                         static_cast<double>(sy) * inv_sqrt2,
+                         static_cast<double>(sz) * inv_sqrt2);
         }
     }
 
-    const types::MapConfig map_config = output_map_.getMapConfig();
-    const double cell_cm = gridStepCm(map_config);
-    const double radius_cm = drone_config_.radius.force_numerical_value_in(cm);
-    const ProximityMode mode =
-        (impl_->scan_pass == 0) ? ProximityMode::Normal : ProximityMode::Expanded;
-
-    const double denom = (radius_cm > 0.0) ? radius_cm : cell_cm;
-    const double el_step_base = std::atan(cell_cm / denom) * (180.0 / std::numbers::pi);
-
-    double angular_scale = 1.0;
-    double az_start = 0.0;
-    double el_start = -90.0;
-    if (impl_->scan_pass == 0 && mode == ProximityMode::Normal) {
-        angular_scale = kCoarsePassAngularScale;
-    } else {
-        const int pass_offset = (impl_->scan_pass <= 0) ? 0 : impl_->scan_pass - 1;
-        if (pass_offset == 1) {
-            const double base_el_step = el_step_base;
-            az_start = base_el_step * kBeamLatticeHalfOffset;
-        } else if (pass_offset >= 2) {
-            const double base_el_step = el_step_base;
-            el_start = -90.0 + base_el_step * kBeamLatticeHalfOffset;
-        }
-    }
-
-    const double el_step = el_step_base * angular_scale;
-    std::vector<double> elevations;
-    elevations.reserve(static_cast<std::size_t>((180.0 / el_step) + 3.0));
-    for (double el = el_start; el <= 90.0 + 1e-9; el += el_step) {
-        elevations.push_back(std::clamp(el, -90.0, 90.0));
-    }
-    if (std::find_if(elevations.begin(), elevations.end(),
-                     [](double el) { return std::abs(el) < 1e-6; }) == elevations.end()) {
-        elevations.push_back(0.0);
-    }
-    std::sort(elevations.begin(), elevations.end());
-
-    for (const double el_clamped : elevations) {
-        const double cos_el = std::cos(el_clamped * (std::numbers::pi / 180.0));
-        const double az_step = (cos_el > 1e-6) ? (el_step / cos_el) : 360.0;
-        for (double az = az_start; az < az_start + 360.0; az += az_step) {
-            impl_->scan_orientations.push_back(Orientation{az * deg, el_clamped * deg});
+    const double inv_sqrt3 = 1.0 / std::sqrt(3.0);
+    for (const int sx : {-1, 1}) {
+        for (const int sy : {-1, 1}) {
+            for (const int sz : {-1, 1}) {
+                addDirection(static_cast<double>(sx) * inv_sqrt3,
+                             static_cast<double>(sy) * inv_sqrt3,
+                             static_cast<double>(sz) * inv_sqrt3);
+            }
         }
     }
 }
@@ -238,7 +187,7 @@ std::optional<types::MovementCommand> MappingAlgorithmImpl::movementToward(
         types::MovementCommand cmd{};
         cmd.type = types::MovementCommandType::Rotate;
         cmd.rotation =
-            (delta > 0.0) ? types::RotationDirection::Right : types::RotationDirection::Left;
+            (delta > 0.0) ? types::RotationDirection::Left : types::RotationDirection::Right;
         cmd.angle = std::min(std::abs(delta), rot_limit) * deg;
         return cmd;
     }
@@ -254,10 +203,8 @@ std::optional<types::MovementCommand> MappingAlgorithmImpl::movementToward(
 }
 
 types::MappingStepCommand MappingAlgorithmImpl::handleScanningPhase(const types::DroneState& state) {
-    (void)state;
     if (impl_->scan_orientations.empty()) {
-        impl_->cells_before_scan = countMappedCells();
-        buildScanOrientations();
+        buildScanOrientations(state.heading);
         impl_->scan_index = 0;
     }
 
@@ -268,8 +215,6 @@ types::MappingStepCommand MappingAlgorithmImpl::handleScanningPhase(const types:
         return cmd;
     }
 
-    const std::size_t cells_after = countMappedCells();
-    impl_->last_scan_made_progress = (cells_after > impl_->cells_before_scan);
     impl_->scan_orientations.clear();
     impl_->scan_index = 0;
     impl_->phase = Phase::Planning;
@@ -284,69 +229,57 @@ types::MappingStepCommand MappingAlgorithmImpl::handlePlanningPhase(const types:
         const detail::PlanningDiagnostics diag = impl_->frontier.diagnose(
             output_map_, state.position, drone_config_.radius, impl_->blocked_cells);
 
-        const types::MapConfig map_config = output_map_.getMapConfig();
-        const double normal_cm = computeProximityMaxCm(
-            drone_config_, lidar_config_, map_config, ProximityMode::Normal, 1);
-        const int next_rescue_pass = std::max(1, impl_->scan_pass + 1);
-        const double expanded_cm = computeProximityMaxCm(
-            drone_config_, lidar_config_, map_config, ProximityMode::Expanded, next_rescue_pass);
-
-        const bool local_unknown_normal =
-            detail::hasNotMappedInSphere(output_map_, state.position, normal_cm * cm);
-        const bool local_unknown_expanded =
-            detail::hasNotMappedInSphere(output_map_, state.position, expanded_cm * cm);
         const bool mission_has_unknown = detail::hasAnyNotMappedInBounds(output_map_);
-        const bool can_retry = impl_->scan_pass < kMaxScanPassIndex &&
-                               (impl_->scan_pass == 0 || impl_->last_scan_made_progress ||
-                                mission_has_unknown);
-        const bool should_rescan =
-            can_retry &&
-            ((impl_->scan_pass == 0 && (local_unknown_normal || mission_has_unknown)) ||
-             (impl_->scan_pass == 1 && local_unknown_expanded) ||
-             (impl_->scan_pass == 2 && local_unknown_expanded && local_unknown_normal));
 
-        if (should_rescan) {
-            ++impl_->scan_pass;
-            impl_->phase = Phase::Scanning;
-            return handleScanningPhase(state);
+        if (!mission_has_unknown) {
+            impl_->finished = true;
+            types::MappingStepCommand cmd{};
+            cmd.status = types::AlgorithmStatus::Finished;
+            return cmd;
         }
 
-        if (mission_has_unknown && diag.explore_path_available) {
+        if (diag.explore_path_available) {
             const detail::FrontierPathResult explore = impl_->frontier.findExplorePath(
                 output_map_, state.position, drone_config_.radius, impl_->blocked_cells);
             if (explore.found && !explore.path.empty()) {
                 impl_->current_path = explore.path;
                 impl_->path_index = 0;
-                impl_->scan_pass = 0;
                 impl_->moving_stall_ticks = 0;
                 impl_->phase = Phase::Moving;
                 return handleMovingPhase(state);
             }
         }
 
-        if (mission_has_unknown && !diag.start_passable) {
+        if (!diag.start_passable) {
             const detail::FrontierPathResult unstick =
                 impl_->frontier.findUnstickPath(output_map_, state.position, drone_config_.radius);
             if (unstick.found && !unstick.path.empty()) {
                 impl_->current_path = unstick.path;
                 impl_->path_index = 0;
-                impl_->scan_pass = 0;
                 impl_->moving_stall_ticks = 0;
                 impl_->phase = Phase::Moving;
                 return handleMovingPhase(state);
             }
         }
 
+        const detail::FrontierPathResult wander = impl_->frontier.findAnyPassableNeighbor(
+            output_map_, state.position, drone_config_.radius, impl_->blocked_cells);
+        if (wander.found && !wander.path.empty()) {
+            impl_->current_path = wander.path;
+            impl_->path_index = 0;
+            impl_->moving_stall_ticks = 0;
+            impl_->phase = Phase::Moving;
+            return handleMovingPhase(state);
+        }
+
         impl_->finished = true;
         types::MappingStepCommand cmd{};
-        cmd.status = mission_has_unknown ? types::AlgorithmStatus::FinishedWithUnmappableVoxels
-                                         : types::AlgorithmStatus::Finished;
+        cmd.status = types::AlgorithmStatus::FinishedWithUnmappableVoxels;
         return cmd;
     }
 
     impl_->current_path = result.path;
     impl_->path_index = 0;
-    impl_->scan_pass = 0;
     impl_->moving_stall_ticks = 0;
     impl_->phase = Phase::Moving;
     return handleMovingPhase(state);
@@ -354,7 +287,6 @@ types::MappingStepCommand MappingAlgorithmImpl::handlePlanningPhase(const types:
 
 types::MappingStepCommand MappingAlgorithmImpl::handleMovingPhase(const types::DroneState& state) {
     if (impl_->path_index >= impl_->current_path.size()) {
-        impl_->scan_pass = 0;
         impl_->phase = Phase::Scanning;
         return handleScanningPhase(state);
     }
@@ -363,17 +295,20 @@ types::MappingStepCommand MappingAlgorithmImpl::handleMovingPhase(const types::D
         ++impl_->path_index;
         impl_->moving_stall_ticks = 0;
         if (impl_->path_index >= impl_->current_path.size()) {
-            impl_->scan_pass = 0;
             impl_->phase = Phase::Scanning;
             return handleScanningPhase(state);
         }
     } else if (impl_->has_last_position && samePosition(impl_->last_position, state.position)) {
         ++impl_->moving_stall_ticks;
         if (impl_->moving_stall_ticks >= kMaxMovingStallTicks) {
-            impl_->blocked_cells.insert(detail::quantizePosition(
-                impl_->current_path[impl_->path_index], output_map_.getMapConfig()));
+            const auto blocked_key = detail::quantizePosition(
+                impl_->current_path[impl_->path_index], output_map_.getMapConfig());
+            impl_->blocked_cells.insert(blocked_key);
+            if (impl_->mutable_output != nullptr) {
+                impl_->mutable_output->set(impl_->current_path[impl_->path_index],
+                                           types::VoxelOccupancy::Occupied);
+            }
             impl_->moving_stall_ticks = 0;
-            impl_->scan_pass = 0;
             impl_->phase = Phase::Planning;
             return handlePlanningPhase(state);
         }

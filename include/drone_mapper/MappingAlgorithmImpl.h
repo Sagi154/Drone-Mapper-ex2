@@ -8,7 +8,7 @@
 
 namespace drone_mapper {
 
-/// Frontier-based exploration algorithm ported from ex1 DroneAlgorithm.
+/// Full-range frontier exploration: 26-direction scan + BFS frontier planning.
 /// Each nextStep emits at most one scan orientation or one movement command.
 class MappingAlgorithmImpl final : public IMappingAlgorithm {
 public:
@@ -44,8 +44,7 @@ private:
     [[nodiscard]] types::MappingStepCommand handlePlanningPhase(const types::DroneState& state);
     [[nodiscard]] types::MappingStepCommand handleMovingPhase(const types::DroneState& state);
 
-    void buildScanOrientations();
-    [[nodiscard]] std::size_t countMappedCells() const;
+    void buildScanOrientations(const Orientation& heading);
     [[nodiscard]] std::optional<types::MovementCommand> movementToward(
         const types::DroneState& state, const Position3D& target) const;
     [[nodiscard]] bool reachedWaypoint(const types::DroneState& state,
@@ -54,7 +53,6 @@ private:
 
     std::unique_ptr<Impl> impl_;
 
-    static constexpr int kMaxScanPassIndex = 2;
     static constexpr int kMaxMovingStallTicks = 8;
 };
 
