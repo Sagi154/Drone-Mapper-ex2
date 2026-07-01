@@ -5,9 +5,10 @@ function(add_drone_mapper_test_suite target_name label)
     target_link_libraries(${target_name}
         PRIVATE
             drone_mapper
-            GTest::gtest_main
+            GTest::gtest
             GTest::gmock
     )
+    target_sources(${target_name} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_main.cpp)
     target_compile_definitions(${target_name}
         PRIVATE
             DRONE_MAPPER_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
@@ -100,9 +101,10 @@ add_executable(drone_mapper_simulation_test ${DRONE_MAPPER_COMPONENT_TEST_SOURCE
 target_link_libraries(drone_mapper_simulation_test
     PRIVATE
         drone_mapper
-        GTest::gtest_main
+        GTest::gtest
         GTest::gmock
 )
+target_sources(drone_mapper_simulation_test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/test_main.cpp)
 target_compile_definitions(drone_mapper_simulation_test
     PRIVATE
         DRONE_MAPPER_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
