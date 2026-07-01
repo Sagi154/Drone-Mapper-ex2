@@ -53,6 +53,13 @@ public:
         PhysicalLength drone_radius,
         const std::unordered_set<GridKey, GridKeyHash>& blocked_cells = {}) const;
 
+    /// Like findPath but targets the deepest frontier in the passable component.
+    [[nodiscard]] FrontierPathResult findFarthestPath(
+        const IMap3D& map,
+        const Position3D& start,
+        PhysicalLength drone_radius,
+        const std::unordered_set<GridKey, GridKeyHash>& blocked_cells = {}) const;
+
     [[nodiscard]] FrontierPathResult findExplorePath(
         const IMap3D& map,
         const Position3D& start,
@@ -63,6 +70,20 @@ public:
         const IMap3D& map,
         const Position3D& start,
         PhysicalLength drone_radius) const;
+
+    /// One grid step toward a passable neighbor with lower (or equal) unknown distance.
+    [[nodiscard]] FrontierPathResult findGreedyUnknownStep(
+        const IMap3D& map,
+        const Position3D& start,
+        PhysicalLength drone_radius,
+        const std::unordered_set<GridKey, GridKeyHash>& blocked_cells = {}) const;
+
+    /// Any single passable grid step — breaks deadlocks when unknown remains.
+    [[nodiscard]] FrontierPathResult findAnyPassableNeighbor(
+        const IMap3D& map,
+        const Position3D& start,
+        PhysicalLength drone_radius,
+        const std::unordered_set<GridKey, GridKeyHash>& blocked_cells = {}) const;
 
     [[nodiscard]] PlanningDiagnostics diagnose(
         const IMap3D& map,
