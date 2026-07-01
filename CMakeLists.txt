@@ -21,6 +21,7 @@ add_library(drone_mapper
     src/MockMovement.cpp
     src/ScanResultToVoxels.cpp
     src/SimulationManager.cpp
+    src/SimulationCoordUtil.cpp
     src/SimulationRunFactoryImpl.cpp
     src/SimulationRunImpl.cpp
     src/io/RunErrorLog.cpp

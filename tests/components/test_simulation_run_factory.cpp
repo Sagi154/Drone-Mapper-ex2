@@ -1,5 +1,7 @@
 #include <drone_mapper/SimulationRunFactoryImpl.h>
+#include <drone_mapper/SimulationCoordUtil.h>
 #include <drone_mapper/io/RunPathHelpers.h>
+#include <drone_mapper/io/YamlConfigParsers.h>
 
 #include <ConfigFixtures.hpp>
 
@@ -210,6 +212,91 @@ TEST(SimulationRun, Factory_InvalidDroneConfig_ScoreMinusOne) {
     ASSERT_EQ(lines.size(), 1U);
     EXPECT_NE(lines.front().find("CONFIG_FILE_NOT_FOUND"), std::string::npos);
     EXPECT_NE(lines.front().find("missing_drone.yaml"), std::string::npos);
+
+    std::error_code ec;
+    std::filesystem::remove_all(output_path, ec);
+}
+
+TEST(SimulationCoordUtil, WorldInitialDronePosition_AddsMapOffsetZ) {
+    types::SimulationConfigData simulation{};
+    simulation.initial_drone_position =
+        Position3D{150.0 * x_extent[cm], 200.0 * y_extent[cm], 0.0 * z_extent[cm]};
+    simulation.map_offset = Position3D{0.0 * x_extent[cm], 0.0 * y_extent[cm], 150.0 * z_extent[cm]};
+
+    const Position3D world = worldInitialDronePosition(simulation);
+    EXPECT_DOUBLE_EQ(world.x.numerical_value_in(cm), 150.0);
+    EXPECT_DOUBLE_EQ(world.y.numerical_value_in(cm), 200.0);
+    EXPECT_DOUBLE_EQ(world.z.numerical_value_in(cm), 150.0);
+}
+
+TEST(SimulationCoordUtil, WorldInitialDronePosition_UnchangedWhenOffsetZero) {
+    types::SimulationConfigData simulation = minimalSimulation();
+    const Position3D world = worldInitialDronePosition(simulation);
+    EXPECT_EQ(world.x, simulation.initial_drone_position.x);
+    EXPECT_EQ(world.y, simulation.initial_drone_position.y);
+    EXPECT_EQ(world.z, simulation.initial_drone_position.z);
+}
+
+TEST(SimulationRunFactory, InstructorSmallRoom_SpawnPassable) {
+    test_support::CapturingErrorLog error_log;
+    const io::ConfigParseResult<types::SimulationCompositionData> composition =
+        test_support::loadInstructorFocusedComposition("composition_small_room.yaml", error_log);
+    ASSERT_TRUE(composition.ok);
+    ASSERT_EQ(composition.value.simulations.size(), 1U);
+
+    SimulationRunFactoryImpl factory;
+    const std::filesystem::path output_path =
+        std::filesystem::temp_directory_path() / "factory_instructor_small_spawn";
+
+    std::unique_ptr<ISimulationRun> run = factory.create(
+        composition.value.simulations.front(),
+        composition.value.missions.front(),
+        composition.value.drones.front(),
+        composition.value.lidars.front(),
+        output_path);
+    ASSERT_NE(run, nullptr);
+
+    const types::SimulationResult result = run->run();
+    EXPECT_NE(result.mission_results.front().status, types::MissionRunStatus::Error)
+        << "small_room spawn should be passable";
+
+    const std::vector<std::string> lines = readAllLines(io::runErrorLog(output_path, 1));
+    for (const std::string& line : lines) {
+        EXPECT_EQ(line.find("SPAWN_NOT_PASSABLE"), std::string::npos) << line;
+    }
+
+    std::error_code ec;
+    std::filesystem::remove_all(output_path, ec);
+}
+
+TEST(SimulationRunFactory, InstructorHouseLower_SpawnNotPassable) {
+    test_support::CapturingErrorLog error_log;
+    const io::ConfigParseResult<types::SimulationCompositionData> composition =
+        test_support::loadInstructorFocusedComposition("composition_house_lower.yaml", error_log);
+    ASSERT_TRUE(composition.ok);
+    ASSERT_EQ(composition.value.simulations.size(), 1U);
+
+    SimulationRunFactoryImpl factory;
+    const std::filesystem::path output_path =
+        std::filesystem::temp_directory_path() / "factory_instructor_house_spawn";
+
+    std::unique_ptr<ISimulationRun> run = factory.create(
+        composition.value.simulations.front(),
+        composition.value.missions.front(),
+        composition.value.drones.front(),
+        composition.value.lidars.front(),
+        output_path);
+    ASSERT_NE(run, nullptr);
+
+    const types::SimulationResult result = run->run();
+    EXPECT_EQ(result.mission_results.front().status, types::MissionRunStatus::Error);
+    EXPECT_DOUBLE_EQ(result.mission_score, -1.0);
+    ASSERT_FALSE(result.mission_results.front().errors.empty());
+    EXPECT_EQ(result.mission_results.front().errors.front().code, "SPAWN_NOT_PASSABLE");
+
+    const std::vector<std::string> lines = readAllLines(io::runErrorLog(output_path, 1));
+    ASSERT_FALSE(lines.empty());
+    EXPECT_NE(lines.front().find("SPAWN_NOT_PASSABLE"), std::string::npos);
 
     std::error_code ec;
     std::filesystem::remove_all(output_path, ec);

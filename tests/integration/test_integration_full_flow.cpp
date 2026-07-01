@@ -10,6 +10,7 @@
 #include <drone_mapper/MockMovement.h>
 #include <drone_mapper/SimulationManager.h>
 #include <drone_mapper/SimulationRunFactoryImpl.h>
+#include <drone_mapper/SimulationCoordUtil.h>
 #include <drone_mapper/SimulationRunImpl.h>
 #include <drone_mapper/io/RunPathHelpers.h>
 
@@ -135,7 +136,7 @@ public:
 
     IMappingAlgorithm& algorithm_ref = *mapping_algorithm;
     auto gps = std::make_unique<MockGPS>(
-        simulation.initial_drone_position,
+        worldInitialDronePosition(simulation),
         Orientation{simulation.initial_angle, 0.0 * altitude_angle[deg]},
         mission.gps_resolution);
     auto movement = std::make_unique<MockMovement>(*gps, *hidden_map, drone);
@@ -316,14 +317,35 @@ TEST(Integration, InstructorBigRoom_AchievesTargetScore) {
         std::filesystem::temp_directory_path() / "integration_instructor_big_room");
 }
 
-// Scenario: instructor house_lower focused composition (scenario_house.npy, 29×30×31, 1 run).
-// Validates map_axes_offset (height_offset: 150 cm) applied end-to-end: drone starts in the
-// lower volume, not at world Z = 0 inside the floor.
-// Expected: mission_score >= 90, no errors, completes within 60 s.
-TEST(Integration, InstructorHouseLower_AchievesTargetScore) {
-    runInstructorCompositionIntegration(
-        "composition_house_lower.yaml",
-        std::filesystem::temp_directory_path() / "integration_instructor_house_lower");
+// Scenario: instructor house_lower — map_axes_offset shifts mission-local Z into hidden-map
+// world frame, but scenario_house.npy has no passable voxel at the configured (x,y) in the
+// lower mission band (solid iz 0–6). Factory must reject spawn with SPAWN_NOT_PASSABLE.
+TEST(Integration, InstructorHouseLower_SpawnNotPassable) {
+    test_support::CapturingErrorLog log;
+    const io::ConfigParseResult<types::SimulationCompositionData> composition_result =
+        test_support::loadInstructorFocusedComposition("composition_house_lower.yaml", log);
+    ASSERT_TRUE(composition_result.ok);
+    EXPECT_TRUE(log.entries().empty());
+
+    const std::filesystem::path output_path =
+        std::filesystem::temp_directory_path() / "integration_instructor_house_lower";
+    removeDirectory(output_path);
+
+    const types::SimulationManagerReport report =
+        runComposition(composition_result.value, output_path);
+
+    ASSERT_EQ(report.runs.size(), 1U);
+    ASSERT_EQ(report.runs.front().mission_results.size(), 1U);
+    EXPECT_EQ(report.runs.front().mission_results.front().status, types::MissionRunStatus::Error);
+    EXPECT_DOUBLE_EQ(report.runs.front().mission_score, -1.0);
+    ASSERT_FALSE(report.runs.front().mission_results.front().errors.empty());
+    EXPECT_EQ(report.runs.front().mission_results.front().errors.front().code, "SPAWN_NOT_PASSABLE");
+
+    const std::vector<std::string> error_lines = readAllLines(io::runErrorLog(output_path, 1));
+    ASSERT_FALSE(error_lines.empty());
+    EXPECT_NE(error_lines.front().find("SPAWN_NOT_PASSABLE"), std::string::npos);
+
+    removeDirectory(output_path);
 }
 
 // Scenario: parse full sim_compose.yaml (24 runs) — no execution.

@@ -1,5 +1,6 @@
 #include <drone_mapper/SimulationRunFactoryImpl.h>
 
+#include <drone_mapper/SimulationCoordUtil.h>
 #include <drone_mapper/DroneControlImpl.h>
 #include <drone_mapper/Map3DImpl.h>
 #include <drone_mapper/MappingAlgorithmImpl.h>
@@ -51,6 +52,11 @@ namespace {
     config.resolution = (hidden_cm / factor) * cm;
     if (!isUnsetBoundaries(mission.boundaries)) {
         config.boundaries = mission.boundaries;
+        config.offset = Position3D{
+            mission.boundaries.min_x,
+            mission.boundaries.min_y,
+            mission.boundaries.min_height,
+        };
     }
     return config;
 }
@@ -135,6 +141,17 @@ void appendConfigLoadErrors(const types::SimulationConfigData& simulation,
     };
 }
 
+[[nodiscard]] std::optional<types::ErrorRef>
+validateSpawnPassable(const IMap3D& hidden_map, const types::DroneConfigData& drone, const Position3D& world_spawn) {
+    if (!isDroneSpawnPassable(hidden_map, drone.radius, world_spawn)) {
+        return types::ErrorRef{
+            "SPAWN_NOT_PASSABLE",
+            "initial drone position is blocked by occupied voxels or map boundary",
+        };
+    }
+    return std::nullopt;
+}
+
 } // namespace
 
 std::unique_ptr<ISimulationRun>
@@ -179,8 +196,15 @@ SimulationRunFactoryImpl::create(const types::SimulationConfigData& simulation,
     auto output_map =
         std::make_unique<Map3DImpl>(makeEmptyOutputArray(output_config), output_config);
 
+    const Position3D world_spawn = worldInitialDronePosition(simulation);
+    if (const std::optional<types::ErrorRef> spawn_error =
+            validateSpawnPassable(*hidden_map, drone, world_spawn)) {
+        error_log.log(*spawn_error);
+        startup_errors.push_back(*spawn_error);
+    }
+
     auto gps = std::make_unique<MockGPS>(
-        simulation.initial_drone_position,
+        world_spawn,
         Orientation{simulation.initial_angle, 0.0 * altitude_angle[deg]},
         mission.gps_resolution);
     auto movement = std::make_unique<MockMovement>(*gps, *hidden_map, drone);
